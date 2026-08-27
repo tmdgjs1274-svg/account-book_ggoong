@@ -1,6 +1,11 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+// Supabase의 "Legacy JWT secret"은 (특히 신규/마이그레이션된 프로젝트에서는) base64로 인코딩된
+// 키 값으로 발급됩니다(문자열에 +, /, = 가 섞여 있으면 base64입니다). jsonwebtoken은 secret을
+// 그냥 원문 문자열의 UTF-8 바이트로 취급하기 때문에, base64 디코딩을 해주지 않으면 Supabase가
+// 실제로 서명할 때 쓰는 키와 달라져서 모든 토큰이 "유효하지 않은 토큰"으로 검증 실패합니다.
+const RAW_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+const JWT_SECRET = RAW_JWT_SECRET ? Buffer.from(RAW_JWT_SECRET, 'base64') : null;
 
 /**
  * Supabase Auth가 발급한 JWT(Access Token)를 검증하는 미들웨어.
