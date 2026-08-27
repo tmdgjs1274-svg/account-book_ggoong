@@ -7,6 +7,19 @@ const jwt = require('jsonwebtoken');
 const RAW_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 const JWT_SECRET = RAW_JWT_SECRET ? Buffer.from(RAW_JWT_SECRET, 'base64') : null;
 
+// 임시 진단 로그: 서버 시작 시 한 번, 실제로 어떤 값을 읽어들였는지 확인합니다.
+// (시크릿 원문은 출력하지 않고 길이/일부만 출력합니다. 문제 해결 후 제거 예정입니다.)
+console.log(
+  '[auth] RAW_JWT_SECRET length:',
+  RAW_JWT_SECRET ? RAW_JWT_SECRET.length : 0,
+  '/ decoded byte length:',
+  JWT_SECRET ? JWT_SECRET.length : 0,
+  '/ raw starts with:',
+  RAW_JWT_SECRET ? JSON.stringify(RAW_JWT_SECRET.slice(0, 6)) : null,
+  '/ raw ends with:',
+  RAW_JWT_SECRET ? JSON.stringify(RAW_JWT_SECRET.slice(-6)) : null
+);
+
 /**
  * Supabase Auth가 발급한 JWT(Access Token)를 검증하는 미들웨어.
  * 프론트엔드는 Supabase 클라이언트로 로그인 후 access_token을
@@ -30,6 +43,8 @@ function requireAuth(req, res, next) {
     req.userEmail = payload.email;
     return next();
   } catch (err) {
+    // 임시 진단 로그: 실제 실패 사유(만료/서명불일치/포맷오류 등)를 서버 로그에 남깁니다.
+    console.error('[auth] jwt.verify failed:', err.name, '-', err.message);
     return res.status(401).json({ error: '유효하지 않거나 만료된 토큰입니다.' });
   }
 }
