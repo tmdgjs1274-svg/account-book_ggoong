@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { X } from 'lucide-react';
 import Card from '@/components/Card';
 import ProgressBar from '@/components/ProgressBar';
@@ -25,7 +26,15 @@ export default function BudgetsPage() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-ink-900">예산</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-ink-900">예산</h1>
+          <Link
+            href="/categories"
+            className="rounded-full bg-surface-alt px-3 py-1.5 text-xs font-semibold text-ink-500"
+          >
+            카테고리 관리
+          </Link>
+        </div>
         <MonthSwitcher month={month} onChange={setMonth} />
       </div>
 
