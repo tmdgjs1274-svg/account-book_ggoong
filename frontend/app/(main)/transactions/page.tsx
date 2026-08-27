@@ -82,21 +82,9 @@ export default function TransactionsPage() {
         ))}
       </div>
 
-      <Card className="flex justify-around text-center">
-        <div>
-          <p className="text-xs text-ink-300">수입</p>
-          <p className="text-base font-bold text-income">{formatWon(totals.income)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-ink-300">지출</p>
-          <p className="text-base font-bold text-expense">{formatWon(totals.expense)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-ink-300">합계</p>
-          <p className="text-base font-bold text-ink-900">
-            {formatWon(totals.income - totals.expense)}
-          </p>
-        </div>
+      <Card className="flex flex-col items-center text-center">
+        <p className="text-xs text-ink-300">지출</p>
+        <p className="text-base font-bold text-expense">{formatWon(totals.expense)}</p>
       </Card>
 
       {isLoading ? (
@@ -135,15 +123,19 @@ export default function TransactionsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span
-                      className={clsx(
-                        'text-sm font-semibold',
-                        t.type === 'income' ? 'text-income' : 'text-ink-900'
-                      )}
-                    >
-                      {t.type === 'income' ? '+' : '-'}
-                      {formatWon(t.amount)}
-                    </span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span
+                        className={clsx(
+                          'text-[10px] font-semibold',
+                          t.type === 'income' ? 'text-income' : 'text-expense'
+                        )}
+                      >
+                        {t.type === 'income' ? '수입' : '지출'}
+                      </span>
+                      <span className="text-sm font-semibold text-ink-900">
+                        {formatWon(t.amount)}
+                      </span>
+                    </div>
                     <button
                       onClick={() => {
                         setEditing(t);

@@ -30,23 +30,10 @@ export default function DashboardPage() {
 
       {/* 요약 카드 */}
       <Card className="bg-gradient-to-br from-primary to-primary-600 text-white">
-        <p className="text-sm text-white/80">이번 달 요약</p>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          <div>
-            <p className="text-xs text-white/70">순잔액</p>
-            <p className="mt-1 text-xl font-bold">
-              {summaryLoading ? '...' : formatWon(summary?.balance || 0)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-white/70">수입</p>
-            <p className="mt-1 text-xl font-bold">{formatWon(summary?.income || 0)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-white/70">지출</p>
-            <p className="mt-1 text-xl font-bold">{formatWon(summary?.expense || 0)}</p>
-          </div>
-        </div>
+        <p className="text-sm text-white/80">이번 달 지출</p>
+        <p className="mt-2 text-3xl font-extrabold">
+          {summaryLoading ? '...' : formatWon(summary?.expense || 0)}
+        </p>
         {summary?.expense_change_rate !== null && summary?.expense_change_rate !== undefined && (
           <div className="mt-4 flex items-center gap-1 text-xs text-white/80">
             {summary.expense_change_rate >= 0 ? (
@@ -142,14 +129,18 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-xs text-ink-300">{formatDateLabel(t.occurred_on)}</p>
                 </div>
-                <span
-                  className={`text-sm font-semibold ${
-                    t.type === 'income' ? 'text-income' : 'text-ink-900'
-                  }`}
-                >
-                  {t.type === 'income' ? '+' : '-'}
-                  {formatWon(t.amount)}
-                </span>
+                <div className="flex flex-col items-end gap-0.5">
+                  <span
+                    className={`text-[10px] font-semibold ${
+                      t.type === 'income' ? 'text-income' : 'text-expense'
+                    }`}
+                  >
+                    {t.type === 'income' ? '수입' : '지출'}
+                  </span>
+                  <span className="text-sm font-semibold text-ink-900">
+                    {formatWon(t.amount)}
+                  </span>
+                </div>
               </li>
             ))}
           </ul>

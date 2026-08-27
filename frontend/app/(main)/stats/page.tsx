@@ -24,25 +24,18 @@ export default function StatsPage() {
     <div className="flex flex-col gap-5">
       <h1 className="text-xl font-bold text-ink-900">통계</h1>
 
-      {/* 최근 6개월 추이 - 월 선택과 무관하게 항상 최근 6개월 고정이라 월 전환 UI가 필요 없어요 */}
-      <Card>
-        <h2 className="mb-3 text-base font-bold text-ink-900">최근 6개월 추이</h2>
-        <TrendBarChart data={trend} />
-        <div className="mt-2 flex justify-center gap-5 text-xs text-ink-500">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-income" /> 수입
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-expense" /> 지출
-          </span>
-        </div>
-      </Card>
-
-      {/* 아래 두 영역(비중, 일별 캘린더)은 이 월 선택을 같이 따라가요 */}
+      {/* 일별 내역 - 아래 월별 상세도 이 월 선택을 같이 따라가요 */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold text-ink-900">월별 상세</h2>
+        <h2 className="text-base font-bold text-ink-900">일별 내역</h2>
         <MonthSwitcher month={month} onChange={setMonth} />
       </div>
+
+      <Card>
+        <MonthCalendar month={month} transactions={transactions} />
+      </Card>
+
+      {/* 월별 상세 */}
+      <h2 className="text-base font-bold text-ink-900">월별 상세</h2>
 
       <Card>
         <div className="mb-4 flex rounded-2xl bg-surface-alt p-1">
@@ -88,9 +81,18 @@ export default function StatsPage() {
         )}
       </Card>
 
+      {/* 최근 6개월 추이 - 월 선택과 무관하게 항상 최근 6개월 고정이라 월 전환 UI가 필요 없어요 */}
       <Card>
-        <h2 className="mb-3 text-base font-bold text-ink-900">일별 내역</h2>
-        <MonthCalendar month={month} transactions={transactions} />
+        <h2 className="mb-3 text-base font-bold text-ink-900">최근 6개월 추이</h2>
+        <TrendBarChart data={trend} />
+        <div className="mt-2 flex justify-center gap-5 text-xs text-ink-500">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-income" /> 수입
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-expense" /> 지출
+          </span>
+        </div>
       </Card>
     </div>
   );
@@ -164,8 +166,12 @@ function MonthCalendar({ month, transactions }: { month: string; transactions: T
                 {cell.day}
               </span>
               <span className="mt-1 flex flex-col items-center gap-0.5 text-[10px] leading-tight">
-                {data && data.expense > 0 && <span className="text-expense">-{formatCompact(data.expense)}</span>}
-                {data && data.income > 0 && <span className="text-income">+{formatCompact(data.income)}</span>}
+                {data && data.expense > 0 && (
+                  <span className="text-expense">{formatCalendarAmount(data.expense)}</span>
+                )}
+                {data && data.income > 0 && (
+                  <span className="text-income">{formatCalendarAmount(data.income)}</span>
+                )}
               </span>
             </button>
           );
@@ -216,11 +222,7 @@ function MonthCalendar({ month, transactions }: { month: string; transactions: T
   );
 }
 
-// 캘린더 칸은 좁아서 "1,234,000원" 대신 "123만원" 같은 축약 표기를 씁니다.
-function formatCompact(amount: number): string {
-  if (amount >= 10000) {
-    const man = amount / 10000;
-    return `${man % 1 === 0 ? man.toFixed(0) : man.toFixed(1)}만`;
-  }
+// 캘린더 칸에는 "원" 단위 없이 "10,000" 형식(천단위 콤마)으로 짧게 표기합니다.
+function formatCalendarAmount(amount: number): string {
   return amount.toLocaleString('ko-KR');
 }
