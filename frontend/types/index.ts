@@ -20,6 +20,8 @@ export interface Transaction {
   memo: string | null;
   occurred_on: string;
   created_at: string;
+  /** 그룹 컨텍스트에서만 내려오는, 이 거래를 기록한 멤버의 이메일 */
+  author_email?: string | null;
 }
 
 export interface Budget {
@@ -92,5 +94,6 @@ export interface GroupMember {
   user_id: string;
   email: string;
   joined_at: string;
+  sort_order: number;
   is_me: boolean;
 }

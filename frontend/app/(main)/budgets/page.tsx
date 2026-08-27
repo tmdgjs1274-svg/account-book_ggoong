@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { X } from 'lucide-react';
+import { X, Tags, Users } from 'lucide-react';
 import Card from '@/components/Card';
 import ProgressBar from '@/components/ProgressBar';
 import MonthSwitcher from '@/components/MonthSwitcher';
 import { useBudgets, useCategories } from '@/lib/hooks';
+import { useGroupContext } from '@/lib/group-context';
 import { api } from '@/lib/api';
 import { formatWon, currentMonthStr } from '@/lib/format';
 import type { Category } from '@/types';
@@ -15,6 +16,7 @@ export default function BudgetsPage() {
   const [month, setMonth] = useState(currentMonthStr());
   const { budgets, mutate } = useBudgets(month);
   const { categories } = useCategories();
+  const { currentGroup } = useGroupContext();
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   const expenseCategories = categories.filter((c) => c.type === 'expense');
@@ -26,16 +28,25 @@ export default function BudgetsPage() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-ink-900">예산</h1>
-          <Link
-            href="/categories"
-            className="rounded-full bg-surface-alt px-3 py-1.5 text-xs font-semibold text-ink-500"
-          >
-            카테고리 관리
-          </Link>
-        </div>
+        <h1 className="text-xl font-bold text-ink-900">예산</h1>
         <MonthSwitcher month={month} onChange={setMonth} />
+      </div>
+
+      <div className="flex gap-2">
+        <Link
+          href="/categories"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-surface-alt py-3 text-sm font-semibold text-ink-700"
+        >
+          <Tags size={16} /> 카테고리 관리
+        </Link>
+        {currentGroup && (
+          <Link
+            href="/members"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-surface-alt py-3 text-sm font-semibold text-ink-700"
+          >
+            <Users size={16} /> 구성원 관리
+          </Link>
+        )}
       </div>
 
       <Card>

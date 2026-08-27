@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, ChevronUp, ChevronDown } from 'lucide-react';
 import clsx from 'clsx';
 import Card from '@/components/Card';
 import { useCategories, isDataKey } from '@/lib/hooks';
@@ -33,10 +33,28 @@ export default function CategoriesPage() {
   const [type, setType] = useState<CategoryType>('expense');
   const [editing, setEditing] = useState<Category | null>(null);
   const [creating, setCreating] = useState(false);
+  const [movingId, setMovingId] = useState<string | null>(null);
 
   const filtered = categories
     .filter((c) => c.type === type)
     .sort((a, b) => a.sort_order - b.sort_order);
+
+  const handleMove = async (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= filtered.length) return;
+    const a = filtered[index];
+    const b = filtered[targetIndex];
+    setMovingId(a.id);
+    try {
+      await Promise.all([
+        api.put(`/api/categories/${a.id}`, { sort_order: b.sort_order }),
+        api.put(`/api/categories/${b.id}`, { sort_order: a.sort_order }),
+      ]);
+      mutate();
+    } finally {
+      setMovingId(null);
+    }
+  };
 
   const refreshAll = () => {
     mutate();
@@ -99,9 +117,27 @@ export default function CategoriesPage() {
             아직 {type === 'expense' ? '지출' : '수입'} 카테고리가 없어요.
           </Card>
         ) : (
-          filtered.map((c) => (
+          filtered.map((c, index) => (
             <Card key={c.id} className="flex items-center justify-between gap-3">
               <div className="flex flex-1 items-center gap-3">
+                <div className="flex flex-col">
+                  <button
+                    onClick={() => handleMove(index, -1)}
+                    disabled={index === 0 || movingId === c.id}
+                    className="rounded p-0.5 text-ink-300 hover:bg-surface-alt disabled:opacity-20"
+                    aria-label="위로"
+                  >
+                    <ChevronUp size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleMove(index, 1)}
+                    disabled={index === filtered.length - 1 || movingId === c.id}
+                    className="rounded p-0.5 text-ink-300 hover:bg-surface-alt disabled:opacity-20"
+                    aria-label="아래로"
+                  >
+                    <ChevronDown size={16} />
+                  </button>
+                </div>
                 <span
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
                   style={{ backgroundColor: c.color }}

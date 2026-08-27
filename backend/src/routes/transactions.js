@@ -29,6 +29,23 @@ router.get('/', async (req, res) => {
 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
+
+  // 그룹 컨텍스트일 때만 "누가 기록했는지"를 같이 내려줍니다.
+  // (개인 컨텍스트는 항상 본인 것이라 표시할 필요가 없습니다)
+  if (req.groupId && data.length > 0) {
+    const uniqueUserIds = [...new Set(data.map((t) => t.user_id))];
+    const emailById = {};
+    await Promise.all(
+      uniqueUserIds.map(async (uid) => {
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(uid);
+        emailById[uid] = userData?.user?.email || '알 수 없음';
+      })
+    );
+    for (const t of data) {
+      t.author_email = emailById[t.user_id] || null;
+    }
+  }
+
   res.json(data);
 });
 

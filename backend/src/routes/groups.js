@@ -114,7 +114,7 @@ router.post('/join', async (req, res) => {
   res.status(200).json(group);
 });
 
-// GET /api/groups/:id/members - 그룹 멤버 목록 (이메일 포함)
+// GET /api/groups/:id/members - 그룹 멤버 목록 (이메일 포함, 표시 순서대로)
 router.get('/:id/members', async (req, res) => {
   const { data: myMembership } = await supabaseAdmin
     .from('group_members')
@@ -127,8 +127,9 @@ router.get('/:id/members', async (req, res) => {
 
   const { data: members, error } = await supabaseAdmin
     .from('group_members')
-    .select('user_id, joined_at')
+    .select('user_id, joined_at, sort_order')
     .eq('group_id', req.params.id)
+    .order('sort_order', { ascending: true })
     .order('joined_at', { ascending: true });
 
   if (error) return res.status(500).json({ error: error.message });
@@ -139,6 +140,7 @@ router.get('/:id/members', async (req, res) => {
       return {
         user_id: m.user_id,
         joined_at: m.joined_at,
+        sort_order: m.sort_order,
         email: data?.user?.email || '알 수 없음',
         is_me: m.user_id === req.userId,
       };
@@ -146,6 +148,62 @@ router.get('/:id/members', async (req, res) => {
   );
 
   res.json(withEmails);
+});
+
+// PUT /api/groups/:id/members/:userId - 멤버 표시 순서 변경
+// (그룹 내 모든 멤버가 동등한 권한을 가진다는 원칙에 따라, 어떤 멤버든 순서를 바꿀 수 있습니다)
+router.put('/:id/members/:userId', async (req, res) => {
+  const { sort_order: sortOrder } = req.body;
+  if (typeof sortOrder !== 'number') {
+    return res.status(400).json({ error: 'sort_order(숫자)는 필수입니다.' });
+  }
+
+  const { data: myMembership } = await supabaseAdmin
+    .from('group_members')
+    .select('id')
+    .eq('group_id', req.params.id)
+    .eq('user_id', req.userId)
+    .maybeSingle();
+
+  if (!myMembership) return res.status(403).json({ error: '이 그룹의 멤버가 아니에요.' });
+
+  const { data, error } = await supabaseAdmin
+    .from('group_members')
+    .update({ sort_order: sortOrder })
+    .eq('group_id', req.params.id)
+    .eq('user_id', req.params.userId)
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// DELETE /api/groups/:id/members/:userId - 다른 멤버 내보내기
+// (동등한 권한 원칙에 따라 그룹 내 누구든 다른 멤버를 내보낼 수 있습니다.
+//  본인 스스로를 내보내는 것은 /leave 를 쓰도록 안내합니다.)
+router.delete('/:id/members/:userId', async (req, res) => {
+  if (req.params.userId === req.userId) {
+    return res.status(400).json({ error: '본인은 "그룹 나가기" 기능을 이용해주세요.' });
+  }
+
+  const { data: myMembership } = await supabaseAdmin
+    .from('group_members')
+    .select('id')
+    .eq('group_id', req.params.id)
+    .eq('user_id', req.userId)
+    .maybeSingle();
+
+  if (!myMembership) return res.status(403).json({ error: '이 그룹의 멤버가 아니에요.' });
+
+  const { error } = await supabaseAdmin
+    .from('group_members')
+    .delete()
+    .eq('group_id', req.params.id)
+    .eq('user_id', req.params.userId);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(204).send();
 });
 
 // POST /api/groups/:id/leave - 그룹 탈퇴

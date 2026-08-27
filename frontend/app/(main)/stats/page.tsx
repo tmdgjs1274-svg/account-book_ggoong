@@ -184,7 +184,14 @@ function MonthCalendar({ month, transactions }: { month: string; transactions: T
               {selectedTransactions.map((t) => (
                 <li key={t.id} className="flex items-center justify-between py-2.5 text-sm">
                   <div>
-                    <p className="font-medium text-ink-900">{t.category?.name || '미분류'}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium text-ink-900">{t.category?.name || '미분류'}</p>
+                      {t.author_email && (
+                        <span className="rounded-full bg-surface-alt px-2 py-0.5 text-[10px] font-medium text-ink-500">
+                          {t.author_email.split('@')[0]}
+                        </span>
+                      )}
+                    </div>
                     {t.memo && <p className="text-xs text-ink-300">{t.memo}</p>}
                   </div>
                   <span
