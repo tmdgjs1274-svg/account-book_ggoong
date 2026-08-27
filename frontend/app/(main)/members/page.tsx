@@ -1,125 +1,249 @@
 'use client';
 
 import { useState } from 'react';
-import useSWR from 'swr';
-import Link from 'next/link';
-import { ChevronUp, ChevronDown, UserMinus } from 'lucide-react';
+import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import clsx from 'clsx';
 import Card from '@/components/Card';
+import BackButton from '@/components/BackButton';
+import { SortableList } from '@/components/SortableList';
+import { useSpenders, isDataKey } from '@/lib/hooks';
 import { useGroupContext } from '@/lib/group-context';
 import { api } from '@/lib/api';
-import type { GroupMember } from '@/types';
+import { useSWRConfig } from 'swr';
+import type { Spender } from '@/types';
+
+const COLOR_PALETTE = [
+  '#FF6B6B',
+  '#F5A623',
+  '#4A90D9',
+  '#7B61FF',
+  '#FF8FB1',
+  '#2FCB8C',
+  '#5BC8F2',
+  '#9B7BFF',
+  '#FF9F5B',
+  '#3182F6',
+  '#00C2A8',
+  '#8B5CF6',
+  '#B0B8C1',
+];
 
 export default function MembersPage() {
   const { currentGroup } = useGroupContext();
+  const { spenders, mutate } = useSpenders();
+  const { mutate: globalMutate } = useSWRConfig();
+  const [editing, setEditing] = useState<Spender | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  if (!currentGroup) {
-    return (
-      <div className="flex flex-col gap-5">
-        <h1 className="text-xl font-bold text-ink-900">구성원 관리</h1>
-        <Card className="py-10 text-center text-sm text-ink-300">
-          개인 컨텍스트에는 구성원이 없어요. 상단 전환 메뉴에서 그룹을 먼저 선택해주세요.
-        </Card>
-        <Link
-          href="/groups"
-          className="rounded-2xl bg-surface-alt py-3 text-center text-sm font-semibold text-ink-700"
-        >
-          그룹 관리로 이동
-        </Link>
-      </div>
-    );
-  }
+  const sorted = [...spenders].sort((a, b) => a.sort_order - b.sort_order);
 
-  return <MembersList groupId={currentGroup.id} groupName={currentGroup.name} />;
-}
-
-function MembersList({ groupId, groupName }: { groupId: string; groupName: string }) {
-  const { data: members, mutate } = useSWR<GroupMember[]>(
-    `/api/groups/${groupId}/members`,
-    api.get
-  );
-  const [busyId, setBusyId] = useState<string | null>(null);
-
-  const sorted = [...(members || [])].sort((a, b) => a.sort_order - b.sort_order);
-
-  const handleMove = async (index: number, direction: -1 | 1) => {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= sorted.length) return;
-    const a = sorted[index];
-    const b = sorted[targetIndex];
-    setBusyId(a.user_id);
-    try {
-      await Promise.all([
-        api.put(`/api/groups/${groupId}/members/${a.user_id}`, { sort_order: b.sort_order }),
-        api.put(`/api/groups/${groupId}/members/${b.user_id}`, { sort_order: a.sort_order }),
-      ]);
-      mutate();
-    } finally {
-      setBusyId(null);
-    }
+  const refreshAll = () => {
+    mutate();
+    globalMutate((key) => isDataKey(key, '/api/transactions'));
   };
 
-  const handleRemove = async (m: GroupMember) => {
-    if (!confirm(`${m.email}님을 이 그룹에서 내보낼까요?`)) return;
-    setBusyId(m.user_id);
-    try {
-      await api.del(`/api/groups/${groupId}/members/${m.user_id}`);
-      mutate();
-    } finally {
-      setBusyId(null);
+  const handleReorder = async (reordered: Spender[]) => {
+    const updated = reordered.map((s, i) => ({ ...s, sort_order: i }));
+    mutate(updated, false); // 낙관적 업데이트
+    await Promise.all(
+      updated.map((s) =>
+        api.put(`/api/spenders/${s.id}`, { name: s.name, color: s.color, sort_order: s.sort_order })
+      )
+    );
+    mutate();
+  };
+
+  const handleDelete = async (s: Spender) => {
+    if (
+      !confirm(`"${s.name}" 구성원을 삭제할까요?\n이 구성원으로 표시된 거래는 "미지정"으로 남아요.`)
+    ) {
+      return;
     }
+    await api.del(`/api/spenders/${s.id}`);
+    refreshAll();
   };
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-xl font-bold text-ink-900">구성원 관리</h1>
+      <div className="flex items-center gap-2">
+        <BackButton />
+        <h1 className="text-xl font-bold text-ink-900">구성원 관리</h1>
+      </div>
       <p className="text-sm text-ink-500">
-        <span className="font-semibold text-ink-700">{groupName}</span> 그룹의 구성원이에요. 그룹
-        안에서는 모든 멤버가 동등한 권한을 가지고 있어서, 누구든 순서를 바꾸거나 다른 멤버를
-        내보낼 수 있어요.
+        거래를 <span className="font-semibold text-ink-700">누가 소비했는지</span> 표시하기 위한
+        이름표예요. 로그인 계정과는 별개라서, 계정이 없는 가족도 등록해두고 아무 계정에서나 그
+        구성원을 골라 거래를 기록할 수 있어요.{' '}
+        {currentGroup ? (
+          <>
+            지금은 <span className="font-semibold text-ink-700">{currentGroup.name}</span> 그룹의
+            구성원 목록이에요.
+          </>
+        ) : (
+          '지금은 개인 구성원 목록이에요.'
+        )}
       </p>
 
-      <div className="flex flex-col gap-3">
-        {sorted.map((m, index) => (
-          <Card key={m.user_id} className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col">
-                <button
-                  onClick={() => handleMove(index, -1)}
-                  disabled={index === 0 || busyId === m.user_id}
-                  className="rounded p-0.5 text-ink-300 hover:bg-surface-alt disabled:opacity-20"
-                  aria-label="위로"
+      <button
+        onClick={() => setCreating(true)}
+        className="flex items-center justify-center gap-1.5 rounded-2xl bg-primary py-3 text-sm font-semibold text-white"
+      >
+        <Plus size={16} /> 구성원 추가
+      </button>
+
+      {sorted.length === 0 ? (
+        <Card className="py-10 text-center text-sm text-ink-300">
+          아직 등록된 구성원이 없어요. 예: 아빠, 엄마, 첫째
+        </Card>
+      ) : (
+        <SortableList
+          items={sorted}
+          onReorder={handleReorder}
+          renderItem={(s, dragHandle) => (
+            <Card className="flex items-center justify-between gap-3">
+              <div className="flex flex-1 items-center gap-3">
+                {dragHandle}
+                <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                  style={{ backgroundColor: s.color }}
                 >
-                  <ChevronUp size={16} />
+                  {s.name.slice(0, 1)}
+                </span>
+                <span className="text-sm font-semibold text-ink-900">{s.name}</span>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  onClick={() => setEditing(s)}
+                  className="rounded-full p-2 text-ink-300 hover:bg-surface-alt"
+                  aria-label="수정"
+                >
+                  <Pencil size={16} />
                 </button>
                 <button
-                  onClick={() => handleMove(index, 1)}
-                  disabled={index === sorted.length - 1 || busyId === m.user_id}
-                  className="rounded p-0.5 text-ink-300 hover:bg-surface-alt disabled:opacity-20"
-                  aria-label="아래로"
+                  onClick={() => handleDelete(s)}
+                  className="rounded-full p-2 text-ink-300 hover:bg-surface-alt"
+                  aria-label="삭제"
                 >
-                  <ChevronDown size={16} />
+                  <Trash2 size={16} />
                 </button>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-ink-900">
-                  {m.email} {m.is_me && <span className="text-xs text-ink-300">(나)</span>}
-                </p>
-                <p className="text-xs text-ink-300">
-                  {new Date(m.joined_at).toLocaleDateString('ko-KR')} 가입
-                </p>
-              </div>
-            </div>
-            {!m.is_me && (
+            </Card>
+          )}
+        />
+      )}
+
+      {creating && (
+        <SpenderFormSheet
+          onClose={() => setCreating(false)}
+          onSaved={() => {
+            setCreating(false);
+            refreshAll();
+          }}
+        />
+      )}
+
+      {editing && (
+        <SpenderFormSheet
+          initial={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            refreshAll();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function SpenderFormSheet({
+  initial,
+  onClose,
+  onSaved,
+}: {
+  initial?: Spender;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(initial?.name || '');
+  const [color, setColor] = useState(initial?.color || COLOR_PALETTE[0]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      setError('이름을 입력해주세요.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      if (initial) {
+        await api.put(`/api/spenders/${initial.id}`, {
+          name: name.trim(),
+          color,
+          sort_order: initial.sort_order,
+        });
+      } else {
+        await api.post('/api/spenders', { name: name.trim(), color });
+      }
+      onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장하지 못했어요.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 md:items-center">
+      <div className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-sheet md:rounded-3xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-ink-900">
+            {initial ? '구성원 수정' : '구성원 추가'}
+          </h2>
+          <button onClick={onClose} className="rounded-full p-1 text-ink-300 hover:bg-surface-alt">
+            <X size={22} />
+          </button>
+        </div>
+
+        <div className="mb-4">
+          <label className="mb-1 block text-xs font-medium text-ink-500">이름</label>
+          <input
+            type="text"
+            placeholder="예: 아빠"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-14 w-full rounded-2xl border border-surface-border bg-surface-alt px-4 text-base outline-none focus:border-primary"
+          />
+        </div>
+
+        <div className="mb-6">
+          <label className="mb-1 block text-xs font-medium text-ink-500">색상</label>
+          <div className="flex flex-wrap gap-2">
+            {COLOR_PALETTE.map((hex) => (
               <button
-                onClick={() => handleRemove(m)}
-                disabled={busyId === m.user_id}
-                className="flex items-center gap-1 rounded-xl bg-surface-alt px-3 py-2 text-xs font-semibold text-expense disabled:opacity-50"
-              >
-                <UserMinus size={14} /> 내보내기
-              </button>
-            )}
-          </Card>
-        ))}
+                key={hex}
+                onClick={() => setColor(hex)}
+                className={clsx(
+                  'h-9 w-9 rounded-full ring-offset-2 transition',
+                  color === hex && 'ring-2 ring-ink-900'
+                )}
+                style={{ backgroundColor: hex }}
+                aria-label={hex}
+              />
+            ))}
+          </div>
+        </div>
+
+        {error && <p className="mb-3 text-sm text-expense">{error}</p>}
+
+        <button
+          onClick={handleSubmit}
+          disabled={saving}
+          className="h-14 w-full rounded-2xl bg-primary text-base font-semibold text-white disabled:opacity-50"
+        >
+          {saving ? '저장 중...' : initial ? '수정하기' : '추가하기'}
+        </button>
       </div>
     </div>
   );

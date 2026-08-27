@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
-import { Plus, Pencil, Trash2, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import clsx from 'clsx';
 import Card from '@/components/Card';
+import BackButton from '@/components/BackButton';
+import { SortableList } from '@/components/SortableList';
 import { useCategories, isDataKey } from '@/lib/hooks';
 import { useGroupContext } from '@/lib/group-context';
 import { api } from '@/lib/api';
@@ -33,34 +35,26 @@ export default function CategoriesPage() {
   const [type, setType] = useState<CategoryType>('expense');
   const [editing, setEditing] = useState<Category | null>(null);
   const [creating, setCreating] = useState(false);
-  const [movingId, setMovingId] = useState<string | null>(null);
 
   const filtered = categories
     .filter((c) => c.type === type)
     .sort((a, b) => a.sort_order - b.sort_order);
-
-  const handleMove = async (index: number, direction: -1 | 1) => {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= filtered.length) return;
-    const a = filtered[index];
-    const b = filtered[targetIndex];
-    setMovingId(a.id);
-    try {
-      await Promise.all([
-        api.put(`/api/categories/${a.id}`, { sort_order: b.sort_order }),
-        api.put(`/api/categories/${b.id}`, { sort_order: a.sort_order }),
-      ]);
-      mutate();
-    } finally {
-      setMovingId(null);
-    }
-  };
 
   const refreshAll = () => {
     mutate();
     globalMutate((key) => isDataKey(key, '/api/transactions'));
     globalMutate((key) => isDataKey(key, '/api/budgets'));
     globalMutate((key) => isDataKey(key, '/api/stats'));
+  };
+
+  const handleReorder = async (reordered: Category[]) => {
+    const updated = reordered.map((c, i) => ({ ...c, sort_order: i }));
+    const merged = categories.map((c) => updated.find((u) => u.id === c.id) || c);
+    mutate(merged, false); // 낙관적 업데이트: 서버 응답을 기다리지 않고 화면에 바로 반영
+    await Promise.all(
+      updated.map((c) => api.put(`/api/categories/${c.id}`, { sort_order: c.sort_order }))
+    );
+    mutate();
   };
 
   const handleDelete = async (c: Category) => {
@@ -77,7 +71,10 @@ export default function CategoriesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-xl font-bold text-ink-900">카테고리 관리</h1>
+      <div className="flex items-center gap-2">
+        <BackButton />
+        <h1 className="text-xl font-bold text-ink-900">카테고리 관리</h1>
+      </div>
       <p className="text-sm text-ink-500">
         {currentGroup ? (
           <>
@@ -111,33 +108,18 @@ export default function CategoriesPage() {
         <Plus size={16} /> 카테고리 추가
       </button>
 
-      <div className="flex flex-col gap-3">
-        {filtered.length === 0 ? (
-          <Card className="py-10 text-center text-sm text-ink-300">
-            아직 {type === 'expense' ? '지출' : '수입'} 카테고리가 없어요.
-          </Card>
-        ) : (
-          filtered.map((c, index) => (
-            <Card key={c.id} className="flex items-center justify-between gap-3">
+      {filtered.length === 0 ? (
+        <Card className="py-10 text-center text-sm text-ink-300">
+          아직 {type === 'expense' ? '지출' : '수입'} 카테고리가 없어요.
+        </Card>
+      ) : (
+        <SortableList
+          items={filtered}
+          onReorder={handleReorder}
+          renderItem={(c, dragHandle) => (
+            <Card className="flex items-center justify-between gap-3">
               <div className="flex flex-1 items-center gap-3">
-                <div className="flex flex-col">
-                  <button
-                    onClick={() => handleMove(index, -1)}
-                    disabled={index === 0 || movingId === c.id}
-                    className="rounded p-0.5 text-ink-300 hover:bg-surface-alt disabled:opacity-20"
-                    aria-label="위로"
-                  >
-                    <ChevronUp size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleMove(index, 1)}
-                    disabled={index === filtered.length - 1 || movingId === c.id}
-                    className="rounded p-0.5 text-ink-300 hover:bg-surface-alt disabled:opacity-20"
-                    aria-label="아래로"
-                  >
-                    <ChevronDown size={16} />
-                  </button>
-                </div>
+                {dragHandle}
                 <span
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
                   style={{ backgroundColor: c.color }}
@@ -163,9 +145,9 @@ export default function CategoriesPage() {
                 </button>
               </div>
             </Card>
-          ))
-        )}
-      </div>
+          )}
+        />
+      )}
 
       {creating && (
         <CategoryFormSheet

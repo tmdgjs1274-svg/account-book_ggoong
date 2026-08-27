@@ -4,6 +4,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { Copy, LogOut, Plus, UserPlus, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import Card from '@/components/Card';
+import BackButton from '@/components/BackButton';
 import { useGroupContext } from '@/lib/group-context';
 import { api } from '@/lib/api';
 import type { GroupMember } from '@/types';
@@ -16,7 +17,10 @@ export default function GroupsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-xl font-bold text-ink-900">그룹 관리</h1>
+      <div className="flex items-center gap-2">
+        <BackButton />
+        <h1 className="text-xl font-bold text-ink-900">그룹 관리</h1>
+      </div>
       <p className="text-sm text-ink-500">
         가족이나 함께 살림을 관리하는 사람들과 그룹을 만들어 같은 가계부를 공유할 수 있어요.
         초대 코드를 공유하면 누구나 참여할 수 있고, 그룹 안에서는 모든 멤버가 동등하게 거래를

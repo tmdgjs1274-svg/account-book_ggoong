@@ -3,6 +3,7 @@ import { api } from './api';
 import { useGroupContext } from './group-context';
 import type {
   Category,
+  Spender,
   Transaction,
   Budget,
   RecurringTransaction,
@@ -21,6 +22,15 @@ export function useCategories() {
     ([path]) => api.get<Category[]>(path)
   );
   return { categories: data || [], error, isLoading, mutate };
+}
+
+export function useSpenders() {
+  const { currentGroupId } = useGroupContext();
+  const { data, error, isLoading, mutate } = useSWR<Spender[]>(
+    ['/api/spenders', currentGroupId],
+    ([path]) => api.get<Spender[]>(path)
+  );
+  return { spenders: data || [], error, isLoading, mutate };
 }
 
 export function useTransactions(month: string) {

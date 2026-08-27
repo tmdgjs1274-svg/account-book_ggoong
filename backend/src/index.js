@@ -11,6 +11,7 @@ const budgetsRouter = require('./routes/budgets');
 const recurringRouter = require('./routes/recurring');
 const statsRouter = require('./routes/stats');
 const groupsRouter = require('./routes/groups');
+const spendersRouter = require('./routes/spenders');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -34,6 +35,7 @@ app.use('/api/groups', groupsRouter);
 
 // 아래는 X-Group-Id 헤더로 개인/그룹 컨텍스트를 판별
 app.use('/api/categories', resolveGroupContext, categoriesRouter);
+app.use('/api/spenders', resolveGroupContext, spendersRouter);
 app.use('/api/transactions', resolveGroupContext, transactionsRouter);
 app.use('/api/budgets', resolveGroupContext, budgetsRouter);
 app.use('/api/recurring', resolveGroupContext, recurringRouter);

@@ -10,18 +10,30 @@ export interface Category {
   sort_order: number;
 }
 
+// 로그인 계정과 무관하게, "이 거래를 누가 소비했는지" 표시하기 위한 이름표.
+// 실제로 로그인해서 기록한 사람(user_id)과는 다른 개념이라, 계정이 없는
+// 가족 구성원도 등록해두고 아무 계정에서나 골라 쓸 수 있어요.
+export interface Spender {
+  id: string;
+  user_id: string;
+  group_id: string | null;
+  name: string;
+  color: string;
+  sort_order: number;
+}
+
 export interface Transaction {
   id: string;
   user_id: string;
   category_id: string | null;
   category: Category | null;
+  spender_id: string | null;
+  spender: Spender | null;
   type: CategoryType;
   amount: number;
   memo: string | null;
   occurred_on: string;
   created_at: string;
-  /** 그룹 컨텍스트에서만 내려오는, 이 거래를 기록한 멤버의 이메일 */
-  author_email?: string | null;
 }
 
 export interface Budget {
@@ -94,6 +106,5 @@ export interface GroupMember {
   user_id: string;
   email: string;
   joined_at: string;
-  sort_order: number;
   is_me: boolean;
 }

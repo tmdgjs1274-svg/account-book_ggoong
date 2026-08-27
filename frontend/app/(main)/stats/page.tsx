@@ -186,9 +186,12 @@ function MonthCalendar({ month, transactions }: { month: string; transactions: T
                   <div>
                     <div className="flex items-center gap-1.5">
                       <p className="font-medium text-ink-900">{t.category?.name || '미분류'}</p>
-                      {t.author_email && (
-                        <span className="rounded-full bg-surface-alt px-2 py-0.5 text-[10px] font-medium text-ink-500">
-                          {t.author_email.split('@')[0]}
+                      {t.spender && (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+                          style={{ backgroundColor: t.spender.color }}
+                        >
+                          {t.spender.name}
                         </span>
                       )}
                     </div>

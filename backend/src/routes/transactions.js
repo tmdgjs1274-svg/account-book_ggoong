@@ -5,6 +5,9 @@ const { applyScope } = require('../middleware/groupContext');
 
 const router = express.Router();
 
+const SELECT_WITH_JOINS =
+  '*, category:categories(id, name, color, icon, type), spender:spenders(id, name, color)';
+
 // GET /api/transactions?month=YYYY-MM&type=expense&category_id=...
 router.get('/', async (req, res) => {
   await ensureRecurringGenerated(req.userId, req.groupId);
@@ -13,7 +16,7 @@ router.get('/', async (req, res) => {
 
   let query = supabaseAdmin
     .from('transactions')
-    .select('*, category:categories(id, name, color, icon, type)')
+    .select(SELECT_WITH_JOINS)
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false });
   query = applyScope(query, req);
@@ -29,29 +32,19 @@ router.get('/', async (req, res) => {
 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
-
-  // 그룹 컨텍스트일 때만 "누가 기록했는지"를 같이 내려줍니다.
-  // (개인 컨텍스트는 항상 본인 것이라 표시할 필요가 없습니다)
-  if (req.groupId && data.length > 0) {
-    const uniqueUserIds = [...new Set(data.map((t) => t.user_id))];
-    const emailById = {};
-    await Promise.all(
-      uniqueUserIds.map(async (uid) => {
-        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(uid);
-        emailById[uid] = userData?.user?.email || '알 수 없음';
-      })
-    );
-    for (const t of data) {
-      t.author_email = emailById[t.user_id] || null;
-    }
-  }
-
   res.json(data);
 });
 
 // POST /api/transactions - 거래 추가
 router.post('/', async (req, res) => {
-  const { category_id: categoryId, type, amount, memo, occurred_on: occurredOn } = req.body;
+  const {
+    category_id: categoryId,
+    spender_id: spenderId,
+    type,
+    amount,
+    memo,
+    occurred_on: occurredOn,
+  } = req.body;
 
   if (!['income', 'expense'].includes(type) || !amount || Number(amount) <= 0) {
     return res.status(400).json({ error: 'type(income|expense)과 amount(양수)는 필수입니다.' });
@@ -63,12 +56,13 @@ router.post('/', async (req, res) => {
       user_id: req.userId,
       group_id: req.groupId,
       category_id: categoryId || null,
+      spender_id: spenderId || null,
       type,
       amount,
       memo: memo || null,
       occurred_on: occurredOn || new Date().toISOString().slice(0, 10),
     })
-    .select('*, category:categories(id, name, color, icon, type)')
+    .select(SELECT_WITH_JOINS)
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
@@ -77,12 +71,20 @@ router.post('/', async (req, res) => {
 
 // PUT /api/transactions/:id - 거래 수정
 router.put('/:id', async (req, res) => {
-  const { category_id: categoryId, type, amount, memo, occurred_on: occurredOn } = req.body;
+  const {
+    category_id: categoryId,
+    spender_id: spenderId,
+    type,
+    amount,
+    memo,
+    occurred_on: occurredOn,
+  } = req.body;
 
   let query = supabaseAdmin
     .from('transactions')
     .update({
       category_id: categoryId,
+      spender_id: spenderId,
       type,
       amount,
       memo,
@@ -92,9 +94,7 @@ router.put('/:id', async (req, res) => {
     .eq('id', req.params.id);
   query = applyScope(query, req);
 
-  const { data, error } = await query
-    .select('*, category:categories(id, name, color, icon, type)')
-    .single();
+  const { data, error } = await query.select(SELECT_WITH_JOINS).single();
 
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: '거래를 찾을 수 없습니다.' });

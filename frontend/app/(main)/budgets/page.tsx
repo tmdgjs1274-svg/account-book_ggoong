@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { X, Tags, Users } from 'lucide-react';
+import { X, Tags } from 'lucide-react';
 import Card from '@/components/Card';
 import ProgressBar from '@/components/ProgressBar';
 import MonthSwitcher from '@/components/MonthSwitcher';
 import { useBudgets, useCategories } from '@/lib/hooks';
-import { useGroupContext } from '@/lib/group-context';
 import { api } from '@/lib/api';
 import { formatWon, currentMonthStr } from '@/lib/format';
 import type { Category } from '@/types';
@@ -16,7 +15,6 @@ export default function BudgetsPage() {
   const [month, setMonth] = useState(currentMonthStr());
   const { budgets, mutate } = useBudgets(month);
   const { categories } = useCategories();
-  const { currentGroup } = useGroupContext();
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   const expenseCategories = categories.filter((c) => c.type === 'expense');
@@ -29,24 +27,17 @@ export default function BudgetsPage() {
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-ink-900">예산</h1>
-        <MonthSwitcher month={month} onChange={setMonth} />
-      </div>
-
-      <div className="flex gap-2">
-        <Link
-          href="/categories"
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-surface-alt py-3 text-sm font-semibold text-ink-700"
-        >
-          <Tags size={16} /> 카테고리 관리
-        </Link>
-        {currentGroup && (
+        <div className="flex items-center gap-2">
+          <MonthSwitcher month={month} onChange={setMonth} />
           <Link
-            href="/members"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-surface-alt py-3 text-sm font-semibold text-ink-700"
+            href="/categories"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-alt text-ink-500 hover:bg-surface-border"
+            aria-label="카테고리 관리"
+            title="카테고리 관리"
           >
-            <Users size={16} /> 구성원 관리
+            <Tags size={16} />
           </Link>
-        )}
+        </div>
       </div>
 
       <Card>

@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import Link from 'next/link';
+import { X, Settings } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '@/lib/api';
-import { useCategories, isDataKey } from '@/lib/hooks';
+import { useCategories, useSpenders, isDataKey } from '@/lib/hooks';
 import type { Transaction, CategoryType } from '@/types';
 import { useSWRConfig } from 'swr';
 
@@ -17,11 +18,13 @@ interface Props {
 
 export default function TransactionFormSheet({ open, onClose, onSaved, initial }: Props) {
   const { categories } = useCategories();
+  const { spenders } = useSpenders();
   const { mutate } = useSWRConfig();
 
   const [type, setType] = useState<CategoryType>('expense');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [spenderId, setSpenderId] = useState<string | null>(null);
   const [occurredOn, setOccurredOn] = useState(new Date().toISOString().slice(0, 10));
   const [memo, setMemo] = useState('');
   const [saving, setSaving] = useState(false);
@@ -33,12 +36,14 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
       setType(initial.type);
       setAmount(String(initial.amount));
       setCategoryId(initial.category_id);
+      setSpenderId(initial.spender_id);
       setOccurredOn(initial.occurred_on);
       setMemo(initial.memo || '');
     } else {
       setType('expense');
       setAmount('');
       setCategoryId(null);
+      setSpenderId(null);
       setOccurredOn(new Date().toISOString().slice(0, 10));
       setMemo('');
     }
@@ -66,6 +71,7 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
         type,
         amount: Number(amount),
         category_id: categoryId,
+        spender_id: spenderId,
         occurred_on: occurredOn,
         memo: memo || null,
       };
@@ -150,6 +156,59 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
               </button>
             ))}
           </div>
+        </div>
+
+        {/* 구성원 (누가 소비했는지) */}
+        <div className="mb-4">
+          <div className="mb-1 flex items-center justify-between">
+            <label className="block text-xs font-medium text-ink-500">구성원 (선택)</label>
+            <Link
+              href="/members"
+              className="flex items-center gap-1 text-xs font-medium text-ink-300 hover:text-ink-500"
+            >
+              <Settings size={12} /> 관리
+            </Link>
+          </div>
+          {spenders.length === 0 ? (
+            <p className="text-xs text-ink-300">
+              등록된 구성원이 없어요. 위 &apos;관리&apos;에서 추가할 수 있어요.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSpenderId(null)}
+                className={clsx(
+                  'rounded-full border px-3 py-2 text-sm font-medium transition',
+                  spenderId === null
+                    ? 'border-primary bg-primary-50 text-primary'
+                    : 'border-surface-border text-ink-500'
+                )}
+              >
+                미지정
+              </button>
+              {spenders
+                .slice()
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSpenderId(s.id)}
+                    className={clsx(
+                      'flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition',
+                      spenderId === s.id
+                        ? 'border-primary bg-primary-50 text-primary'
+                        : 'border-surface-border text-ink-500'
+                    )}
+                  >
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: s.color }}
+                    />
+                    {s.name}
+                  </button>
+                ))}
+            </div>
+          )}
         </div>
 
         {/* 날짜 */}
