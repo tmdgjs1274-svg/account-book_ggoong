@@ -3,7 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 
 export const metadata: Metadata = {
-  title: '머니로그 · 가계부',
+  title: '뱅크로그 · 가계부',
   description: '간편한 우리 가족 가계부',
 };
 

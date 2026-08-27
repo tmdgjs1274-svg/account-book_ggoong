@@ -19,6 +19,7 @@ export default function DashboardPage() {
 
   const topBudgets = [...budgets].sort((a, b) => b.usage_rate - a.usage_rate).slice(0, 3);
   const recentTransactions = transactions.slice(0, 5);
+  const topCategories = breakdown?.categories.slice(0, 6) || [];
 
   return (
     <div className="flex flex-col gap-5">
@@ -67,7 +68,23 @@ export default function DashboardPage() {
             자세히 <ChevronRight size={14} />
           </Link>
         </div>
-        <DonutChart data={breakdown?.categories.slice(0, 6) || []} />
+        <DonutChart data={topCategories} />
+        {topCategories.length > 0 && (
+          <div className="mt-4 flex flex-col gap-3">
+            {topCategories.map((c) => (
+              <div key={c.category_id} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                  <span className="font-medium text-ink-700">{c.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-ink-500">{formatWon(c.amount)}</span>
+                  <span className="w-10 text-right font-semibold text-ink-900">{c.percent}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* 예산 현황 */}

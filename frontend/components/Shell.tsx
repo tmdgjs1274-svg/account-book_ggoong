@@ -32,7 +32,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-surface-alt">
       {/* 데스크톱 사이드바 */}
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-surface-border bg-white px-4 py-6 md:flex">
-        <div className="mb-4 px-2 text-xl font-extrabold text-ink-900">머니로그</div>
+        <div className="mb-4 px-2 text-xl font-extrabold text-ink-900">뱅크로그</div>
         <div className="mb-6">
           <GroupSwitcher />
         </div>
