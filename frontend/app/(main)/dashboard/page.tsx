@@ -29,18 +29,21 @@ export default function DashboardPage() {
 
       {/* 요약 카드 */}
       <Card className="bg-gradient-to-br from-primary to-primary-600 text-white">
-        <p className="text-sm text-white/80">이번 달 순잔액</p>
-        <p className="mt-1 text-3xl font-extrabold">
-          {summaryLoading ? '...' : formatWon(summary?.balance || 0)}
-        </p>
-        <div className="mt-5 flex gap-6">
+        <p className="text-sm text-white/80">이번 달 요약</p>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <div>
+            <p className="text-xs text-white/70">순잔액</p>
+            <p className="mt-1 text-xl font-bold">
+              {summaryLoading ? '...' : formatWon(summary?.balance || 0)}
+            </p>
+          </div>
           <div>
             <p className="text-xs text-white/70">수입</p>
-            <p className="text-base font-semibold">{formatWon(summary?.income || 0)}</p>
+            <p className="mt-1 text-xl font-bold">{formatWon(summary?.income || 0)}</p>
           </div>
           <div>
             <p className="text-xs text-white/70">지출</p>
-            <p className="text-base font-semibold">{formatWon(summary?.expense || 0)}</p>
+            <p className="mt-1 text-xl font-bold">{formatWon(summary?.expense || 0)}</p>
           </div>
         </div>
         {summary?.expense_change_rate !== null && summary?.expense_change_rate !== undefined && (
