@@ -82,22 +82,28 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* 모바일 하단 탭바 */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t border-surface-border bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-        {NAV_ITEMS.slice(0, 2).map((item) => (
-          <TabLink key={item.href} item={item} active={!!pathname?.startsWith(item.href)} />
-        ))}
+      {/* 좌/우를 각각 flex-1 컨테이너로 감싸서 항목 개수가 안 맞아도(2개 vs 3개)
+          가운데 + 버튼이 항상 정중앙에 오도록 고정합니다. */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-center border-t border-surface-border bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+        <div className="flex flex-1 items-center justify-around">
+          {NAV_ITEMS.slice(0, 2).map((item) => (
+            <TabLink key={item.href} item={item} active={!!pathname?.startsWith(item.href)} />
+          ))}
+        </div>
 
         <button
           onClick={() => setQuickAddOpen(true)}
-          className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg"
+          className="-mt-5 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg"
           aria-label="거래 추가"
         >
           <Plus size={26} />
         </button>
 
-        {NAV_ITEMS.slice(2).map((item) => (
-          <TabLink key={item.href} item={item} active={!!pathname?.startsWith(item.href)} />
-        ))}
+        <div className="flex flex-1 items-center justify-around">
+          {NAV_ITEMS.slice(2).map((item) => (
+            <TabLink key={item.href} item={item} active={!!pathname?.startsWith(item.href)} />
+          ))}
+        </div>
       </nav>
 
       <TransactionFormSheet
