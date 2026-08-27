@@ -7,6 +7,7 @@ import { Home, List, PiggyBank, BarChart3, Repeat, Plus, LogOut } from 'lucide-r
 import clsx from 'clsx';
 import { useAuth } from '@/lib/auth-context';
 import TransactionFormSheet from './TransactionFormSheet';
+import GroupSwitcher from './GroupSwitcher';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: '홈', icon: Home },
@@ -31,7 +32,10 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-surface-alt">
       {/* 데스크톱 사이드바 */}
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-surface-border bg-white px-4 py-6 md:flex">
-        <div className="mb-8 px-2 text-xl font-extrabold text-ink-900">머니로그</div>
+        <div className="mb-4 px-2 text-xl font-extrabold text-ink-900">머니로그</div>
+        <div className="mb-6">
+          <GroupSwitcher />
+        </div>
         <nav className="flex flex-1 flex-col gap-1">
           {NAV_ITEMS.map((item) => {
             const active = pathname?.startsWith(item.href);
@@ -64,6 +68,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <LogOut size={18} /> 로그아웃
         </button>
       </aside>
+
+      {/* 모바일 상단 그룹 스위처 */}
+      <div className="sticky top-0 z-20 border-b border-surface-border bg-white/95 px-4 py-3 backdrop-blur md:hidden">
+        <div className="mx-auto max-w-xs">
+          <GroupSwitcher />
+        </div>
+      </div>
 
       {/* 본문 */}
       <main className="mx-auto max-w-3xl px-4 pb-28 pt-6 md:ml-60 md:max-w-none md:px-10 md:pb-10">

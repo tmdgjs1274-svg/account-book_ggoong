@@ -1,21 +1,22 @@
 const express = require('express');
 const { supabaseAdmin } = require('../supabaseAdmin');
 const { ensureRecurringGenerated } = require('../lib/recurring');
+const { applyScope } = require('../middleware/groupContext');
 
 const router = express.Router();
 
 // GET /api/transactions?month=YYYY-MM&type=expense&category_id=...
 router.get('/', async (req, res) => {
-  await ensureRecurringGenerated(req.userId);
+  await ensureRecurringGenerated(req.userId, req.groupId);
 
   const { month, type, category_id: categoryId } = req.query;
 
   let query = supabaseAdmin
     .from('transactions')
     .select('*, category:categories(id, name, color, icon, type)')
-    .eq('user_id', req.userId)
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false });
+  query = applyScope(query, req);
 
   if (month) {
     const start = `${month}-01`;
@@ -43,6 +44,7 @@ router.post('/', async (req, res) => {
     .from('transactions')
     .insert({
       user_id: req.userId,
+      group_id: req.groupId,
       category_id: categoryId || null,
       type,
       amount,
@@ -60,7 +62,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const { category_id: categoryId, type, amount, memo, occurred_on: occurredOn } = req.body;
 
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('transactions')
     .update({
       category_id: categoryId,
@@ -70,8 +72,10 @@ router.put('/:id', async (req, res) => {
       occurred_on: occurredOn,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', req.params.id)
-    .eq('user_id', req.userId)
+    .eq('id', req.params.id);
+  query = applyScope(query, req);
+
+  const { data, error } = await query
     .select('*, category:categories(id, name, color, icon, type)')
     .single();
 
@@ -82,11 +86,10 @@ router.put('/:id', async (req, res) => {
 
 // DELETE /api/transactions/:id
 router.delete('/:id', async (req, res) => {
-  const { error } = await supabaseAdmin
-    .from('transactions')
-    .delete()
-    .eq('id', req.params.id)
-    .eq('user_id', req.userId);
+  let query = supabaseAdmin.from('transactions').delete().eq('id', req.params.id);
+  query = applyScope(query, req);
+
+  const { error } = await query;
 
   if (error) return res.status(500).json({ error: error.message });
   res.status(204).send();

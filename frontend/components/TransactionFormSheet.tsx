@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '@/lib/api';
-import { useCategories } from '@/lib/hooks';
+import { useCategories, isDataKey } from '@/lib/hooks';
 import type { Transaction, CategoryType } from '@/types';
 import { useSWRConfig } from 'swr';
 
@@ -74,9 +74,9 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
       } else {
         await api.post('/api/transactions', payload);
       }
-      mutate((key) => typeof key === 'string' && key.startsWith('/api/transactions'));
-      mutate((key) => typeof key === 'string' && key.startsWith('/api/stats'));
-      mutate((key) => typeof key === 'string' && key.startsWith('/api/budgets'));
+      mutate((key) => isDataKey(key, '/api/transactions'));
+      mutate((key) => isDataKey(key, '/api/stats'));
+      mutate((key) => isDataKey(key, '/api/budgets'));
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : '저장에 실패했어요.');

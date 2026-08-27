@@ -78,3 +78,19 @@ export interface BreakdownResponse {
   total: number;
   categories: BreakdownItem[];
 }
+
+export interface Group {
+  id: string;
+  name: string;
+  invite_code: string;
+  created_by: string;
+  created_at: string;
+  member_count: number;
+}
+
+export interface GroupMember {
+  user_id: string;
+  email: string;
+  joined_at: string;
+  is_me: boolean;
+}

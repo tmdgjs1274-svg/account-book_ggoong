@@ -7,7 +7,7 @@ import clsx from 'clsx';
 import Card from '@/components/Card';
 import MonthSwitcher from '@/components/MonthSwitcher';
 import TransactionFormSheet from '@/components/TransactionFormSheet';
-import { useTransactions } from '@/lib/hooks';
+import { useTransactions, isDataKey } from '@/lib/hooks';
 import { api } from '@/lib/api';
 import { formatWon, formatDateLabel, currentMonthStr } from '@/lib/format';
 import type { Transaction, CategoryType } from '@/types';
@@ -50,8 +50,8 @@ export default function TransactionsPage() {
     if (!confirm('이 거래를 삭제할까요?')) return;
     await api.del(`/api/transactions/${id}`);
     mutate();
-    globalMutate((key) => typeof key === 'string' && key.startsWith('/api/stats'));
-    globalMutate((key) => typeof key === 'string' && key.startsWith('/api/budgets'));
+    globalMutate((key) => isDataKey(key, '/api/stats'));
+    globalMutate((key) => isDataKey(key, '/api/budgets'));
   };
 
   return (

@@ -1,15 +1,18 @@
 const express = require('express');
 const { supabaseAdmin } = require('../supabaseAdmin');
+const { applyScope } = require('../middleware/groupContext');
 
 const router = express.Router();
 
-// GET /api/recurring - 내 반복 거래 목록
+// GET /api/recurring - 반복 거래 목록 (개인 또는 현재 그룹)
 router.get('/', async (req, res) => {
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('recurring_transactions')
     .select('*, category:categories(id, name, color, icon, type)')
-    .eq('user_id', req.userId)
     .order('created_at', { ascending: false });
+  query = applyScope(query, req);
+
+  const { data, error } = await query;
 
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
@@ -37,6 +40,7 @@ router.post('/', async (req, res) => {
     .from('recurring_transactions')
     .insert({
       user_id: req.userId,
+      group_id: req.groupId,
       category_id: categoryId || null,
       type,
       amount,
@@ -64,7 +68,7 @@ router.put('/:id', async (req, res) => {
     is_active: isActive,
   } = req.body;
 
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('recurring_transactions')
     .update({
       category_id: categoryId,
@@ -75,8 +79,10 @@ router.put('/:id', async (req, res) => {
       end_month: endMonth,
       is_active: isActive,
     })
-    .eq('id', req.params.id)
-    .eq('user_id', req.userId)
+    .eq('id', req.params.id);
+  query = applyScope(query, req);
+
+  const { data, error } = await query
     .select('*, category:categories(id, name, color, icon, type)')
     .single();
 
@@ -87,11 +93,10 @@ router.put('/:id', async (req, res) => {
 
 // DELETE /api/recurring/:id
 router.delete('/:id', async (req, res) => {
-  const { error } = await supabaseAdmin
-    .from('recurring_transactions')
-    .delete()
-    .eq('id', req.params.id)
-    .eq('user_id', req.userId);
+  let query = supabaseAdmin.from('recurring_transactions').delete().eq('id', req.params.id);
+  query = applyScope(query, req);
+
+  const { error } = await query;
 
   if (error) return res.status(500).json({ error: error.message });
   res.status(204).send();

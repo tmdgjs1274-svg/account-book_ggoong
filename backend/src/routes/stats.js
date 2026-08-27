@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabaseAdmin } = require('../supabaseAdmin');
 const { ensureRecurringGenerated } = require('../lib/recurring');
+const { applyScope } = require('../middleware/groupContext');
 
 const router = express.Router();
 
@@ -25,14 +26,16 @@ function shiftMonth(month, delta) {
   return `${y}-${String(m).padStart(2, '0')}`;
 }
 
-async function sumIncomeExpense(userId, month) {
+async function sumIncomeExpense(req, month) {
   const { start, next } = monthRange(month);
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('transactions')
     .select('type, amount')
-    .eq('user_id', userId)
     .gte('occurred_on', start)
     .lt('occurred_on', next);
+  query = applyScope(query, req);
+
+  const { data, error } = await query;
   if (error) throw error;
 
   let income = 0;
@@ -47,13 +50,13 @@ async function sumIncomeExpense(userId, month) {
 // GET /api/stats/summary?month=YYYY-MM - 이번 달 요약 (대시보드용)
 router.get('/summary', async (req, res) => {
   try {
-    await ensureRecurringGenerated(req.userId);
+    await ensureRecurringGenerated(req.userId, req.groupId);
     const month = req.query.month || new Date().toISOString().slice(0, 7);
     const prevMonth = shiftMonth(month, -1);
 
     const [current, previous] = await Promise.all([
-      sumIncomeExpense(req.userId, month),
-      sumIncomeExpense(req.userId, prevMonth),
+      sumIncomeExpense(req, month),
+      sumIncomeExpense(req, prevMonth),
     ]);
 
     res.json({
@@ -83,7 +86,7 @@ router.get('/trend', async (req, res) => {
       monthList.push(shiftMonth(currentMonth, -i));
     }
 
-    const results = await Promise.all(monthList.map((m) => sumIncomeExpense(req.userId, m)));
+    const results = await Promise.all(monthList.map((m) => sumIncomeExpense(req, m)));
 
     res.json(monthList.map((m, i) => ({ month: m, ...results[i] })));
   } catch (err) {
@@ -98,13 +101,15 @@ router.get('/breakdown', async (req, res) => {
     const type = req.query.type === 'income' ? 'income' : 'expense';
     const { start, next } = monthRange(month);
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('transactions')
       .select('amount, category:categories(id, name, color, icon)')
-      .eq('user_id', req.userId)
       .eq('type', type)
       .gte('occurred_on', start)
       .lt('occurred_on', next);
+    query = applyScope(query, req);
+
+    const { data, error } = await query;
 
     if (error) return res.status(500).json({ error: error.message });
 

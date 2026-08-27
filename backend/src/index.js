@@ -4,11 +4,13 @@ const cors = require('cors');
 const morgan = require('morgan');
 
 const { requireAuth } = require('./middleware/auth');
+const { resolveGroupContext } = require('./middleware/groupContext');
 const categoriesRouter = require('./routes/categories');
 const transactionsRouter = require('./routes/transactions');
 const budgetsRouter = require('./routes/budgets');
 const recurringRouter = require('./routes/recurring');
 const statsRouter = require('./routes/stats');
+const groupsRouter = require('./routes/groups');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -26,11 +28,16 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 
 // 이 아래 라우트는 모두 로그인 필요
 app.use('/api', requireAuth);
-app.use('/api/categories', categoriesRouter);
-app.use('/api/transactions', transactionsRouter);
-app.use('/api/budgets', budgetsRouter);
-app.use('/api/recurring', recurringRouter);
-app.use('/api/stats', statsRouter);
+
+// 그룹 관리 자체는 개인/그룹 컨텍스트와 무관 (X-Group-Id 헤더 불필요)
+app.use('/api/groups', groupsRouter);
+
+// 아래는 X-Group-Id 헤더로 개인/그룹 컨텍스트를 판별
+app.use('/api/categories', resolveGroupContext, categoriesRouter);
+app.use('/api/transactions', resolveGroupContext, transactionsRouter);
+app.use('/api/budgets', resolveGroupContext, budgetsRouter);
+app.use('/api/recurring', resolveGroupContext, recurringRouter);
+app.use('/api/stats', resolveGroupContext, statsRouter);
 
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Not Found' }));

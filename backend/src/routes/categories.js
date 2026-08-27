@@ -1,16 +1,16 @@
 const express = require('express');
 const { supabaseAdmin } = require('../supabaseAdmin');
+const { applyScope } = require('../middleware/groupContext');
 
 const router = express.Router();
 
-// GET /api/categories - 내 카테고리 전체 조회
+// GET /api/categories - 내 카테고리 전체 조회 (개인 또는 현재 그룹 컨텍스트)
 router.get('/', async (req, res) => {
-  const { data, error } = await supabaseAdmin
-    .from('categories')
-    .select('*')
-    .eq('user_id', req.userId)
-    .order('type', { ascending: true })
-    .order('sort_order', { ascending: true });
+  let query = supabaseAdmin.from('categories').select('*');
+  query = applyScope(query, req);
+  query = query.order('type', { ascending: true }).order('sort_order', { ascending: true });
+
+  const { data, error } = await query;
 
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
@@ -27,6 +27,7 @@ router.post('/', async (req, res) => {
     .from('categories')
     .insert({
       user_id: req.userId,
+      group_id: req.groupId,
       name,
       type,
       color: color || '#3182F6',
@@ -43,13 +44,13 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const { name, color, icon, sort_order: sortOrder } = req.body;
 
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('categories')
     .update({ name, color, icon, sort_order: sortOrder })
-    .eq('id', req.params.id)
-    .eq('user_id', req.userId)
-    .select()
-    .single();
+    .eq('id', req.params.id);
+  query = applyScope(query, req);
+
+  const { data, error } = await query.select().single();
 
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: '카테고리를 찾을 수 없습니다.' });
@@ -58,11 +59,10 @@ router.put('/:id', async (req, res) => {
 
 // DELETE /api/categories/:id
 router.delete('/:id', async (req, res) => {
-  const { error } = await supabaseAdmin
-    .from('categories')
-    .delete()
-    .eq('id', req.params.id)
-    .eq('user_id', req.userId);
+  let query = supabaseAdmin.from('categories').delete().eq('id', req.params.id);
+  query = applyScope(query, req);
+
+  const { error } = await query;
 
   if (error) return res.status(500).json({ error: error.message });
   res.status(204).send();

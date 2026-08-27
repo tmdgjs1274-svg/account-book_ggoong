@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getCurrentGroupId } from './group-store';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -15,11 +16,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     data: { session },
   } = await supabase.auth.getSession();
 
+  const groupId = getCurrentGroupId();
+
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      ...(groupId ? { 'X-Group-Id': groupId } : {}),
       ...(options.headers || {}),
     },
   });
