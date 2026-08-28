@@ -80,10 +80,14 @@ export function useTrend(months = 6) {
   return { trend: data || [], error, isLoading };
 }
 
-export function useBreakdown(month: string, type: 'income' | 'expense') {
+export function useBreakdown(
+  month: string,
+  type: 'income' | 'expense',
+  groupBy: 'category' | 'spender' = 'category'
+) {
   const { currentGroupId } = useGroupContext();
   const { data, error, isLoading } = useSWR<BreakdownResponse>(
-    [`/api/stats/breakdown?month=${month}&type=${type}`, currentGroupId],
+    [`/api/stats/breakdown?month=${month}&type=${type}&groupBy=${groupBy}`, currentGroupId],
     ([path]) => api.get<BreakdownResponse>(path)
   );
   return { breakdown: data, error, isLoading };

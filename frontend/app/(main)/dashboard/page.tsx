@@ -2,22 +2,32 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import clsx from 'clsx';
 import { TrendingDown, TrendingUp, ChevronRight } from 'lucide-react';
 import Card from '@/components/Card';
 import ProgressBar from '@/components/ProgressBar';
 import MonthSwitcher from '@/components/MonthSwitcher';
 import DonutChart from '@/components/DonutChart';
-import { useSummary, useBudgets, useBreakdown, useTransactions, useLedgerSettings } from '@/lib/hooks';
+import {
+  useSummary,
+  useBudgets,
+  useBreakdown,
+  useTransactions,
+  useLedgerSettings,
+  useSpenders,
+} from '@/lib/hooks';
 import { formatWon, formatDateLabel, currentMonthStr } from '@/lib/format';
 
 export default function DashboardPage() {
   const [month, setMonth] = useState(currentMonthStr());
+  const [breakdownGroupBy, setBreakdownGroupBy] = useState<'category' | 'spender'>('category');
   const { bothEnabled, settings } = useLedgerSettings();
   const { summary, isLoading: summaryLoading } = useSummary(month);
   const { budgets } = useBudgets(month);
+  const { spenders } = useSpenders();
   // 수입만 쓰는 설정이면 "카테고리별 지출" 대신 수입 카테고리 비중을 보여줘요.
   const breakdownType = bothEnabled || settings.expense_enabled ? 'expense' : 'income';
-  const { breakdown } = useBreakdown(month, breakdownType);
+  const { breakdown } = useBreakdown(month, breakdownType, breakdownGroupBy);
   const { transactions } = useTransactions(month);
 
   const topBudgets = [...budgets].sort((a, b) => b.usage_rate - a.usage_rate).slice(0, 3);
@@ -80,16 +90,33 @@ export default function DashboardPage() {
         )}
       </Card>
 
-      {/* 카테고리별 지출 비중 */}
+      {/* 카테고리별/구매자별 지출 비중 */}
       <Card>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-base font-bold text-ink-900">
-            카테고리별 {breakdownType === 'expense' ? '지출' : '수입'}
+            {breakdownGroupBy === 'category' ? '카테고리별' : '구매자별'}{' '}
+            {breakdownType === 'expense' ? '지출' : '수입'}
           </h2>
           <Link href="/stats" className="flex items-center text-xs text-ink-300">
             자세히 <ChevronRight size={14} />
           </Link>
         </div>
+        {spenders.length > 0 && (
+          <div className="mb-3 flex gap-1 rounded-xl bg-surface-alt p-1">
+            {(['category', 'spender'] as const).map((g) => (
+              <button
+                key={g}
+                onClick={() => setBreakdownGroupBy(g)}
+                className={clsx(
+                  'flex-1 rounded-lg py-1.5 text-xs font-semibold transition',
+                  breakdownGroupBy === g ? 'bg-white text-ink-900 shadow-card' : 'text-ink-300'
+                )}
+              >
+                {g === 'category' ? '카테고리별 보기' : '구매자별 보기'}
+              </button>
+            ))}
+          </div>
+        )}
         <DonutChart data={topCategories} />
         {topCategories.length > 0 && (
           <div className="mt-4 flex flex-col gap-3">

@@ -7,7 +7,7 @@ import Card from '@/components/Card';
 import MonthSwitcher from '@/components/MonthSwitcher';
 import DonutChart from '@/components/DonutChart';
 import TrendBarChart from '@/components/TrendBarChart';
-import { useBreakdown, useTrend, useTransactions, useLedgerSettings } from '@/lib/hooks';
+import { useBreakdown, useTrend, useTransactions, useLedgerSettings, useSpenders } from '@/lib/hooks';
 import { formatWon, currentMonthStr } from '@/lib/format';
 import type { CategoryType, Transaction } from '@/types';
 
@@ -16,10 +16,12 @@ const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 export default function StatsPage() {
   const [month, setMonth] = useState(currentMonthStr());
   const [type, setType] = useState<CategoryType>('expense');
+  const [breakdownGroupBy, setBreakdownGroupBy] = useState<'category' | 'spender'>('category');
   const { bothEnabled, forcedType, settings } = useLedgerSettings();
-  const { breakdown, isLoading } = useBreakdown(month, forcedType || type);
+  const { breakdown, isLoading } = useBreakdown(month, forcedType || type, breakdownGroupBy);
   const { trend } = useTrend(6);
   const { transactions } = useTransactions(month);
+  const { spenders } = useSpenders();
 
   return (
     <div className="flex flex-col gap-5">
@@ -51,6 +53,23 @@ export default function StatsPage() {
                 )}
               >
                 {t === 'expense' ? '지출' : '수입'} 비중
+              </button>
+            ))}
+          </div>
+        )}
+
+        {spenders.length > 0 && (
+          <div className="mb-4 flex gap-1 rounded-xl bg-surface-alt p-1">
+            {(['category', 'spender'] as const).map((g) => (
+              <button
+                key={g}
+                onClick={() => setBreakdownGroupBy(g)}
+                className={clsx(
+                  'flex-1 rounded-lg py-1.5 text-xs font-semibold transition',
+                  breakdownGroupBy === g ? 'bg-white text-ink-900 shadow-card' : 'text-ink-300'
+                )}
+              >
+                {g === 'category' ? '카테고리별 보기' : '구매자별 보기'}
               </button>
             ))}
           </div>

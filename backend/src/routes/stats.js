@@ -94,16 +94,22 @@ router.get('/trend', async (req, res) => {
   }
 });
 
-// GET /api/stats/breakdown?month=YYYY-MM&type=expense - 카테고리별 비중
+// GET /api/stats/breakdown?month=YYYY-MM&type=expense&groupBy=category|spender - 비중
+// groupBy 기본값은 category(카테고리별)이고, spender를 넘기면 구매자별로 묶어줘요.
 router.get('/breakdown', async (req, res) => {
   try {
     const month = req.query.month || new Date().toISOString().slice(0, 7);
     const type = req.query.type === 'income' ? 'income' : 'expense';
+    const groupBy = req.query.groupBy === 'spender' ? 'spender' : 'category';
     const { start, next } = monthRange(month);
 
     let query = supabaseAdmin
       .from('transactions')
-      .select('amount, category:categories(id, name, color, icon)')
+      .select(
+        groupBy === 'spender'
+          ? 'amount, spender:spenders(id, name, color)'
+          : 'amount, category:categories(id, name, color, icon)'
+      )
       .eq('type', type)
       .gte('occurred_on', start)
       .lt('occurred_on', next);
@@ -113,28 +119,29 @@ router.get('/breakdown', async (req, res) => {
 
     if (error) return res.status(500).json({ error: error.message });
 
-    const byCategory = new Map();
+    const byGroup = new Map();
     let total = 0;
     for (const t of data) {
       total += Number(t.amount);
-      const key = t.category?.id || 'none';
-      if (!byCategory.has(key)) {
-        byCategory.set(key, {
+      const entity = groupBy === 'spender' ? t.spender : t.category;
+      const key = entity?.id || 'none';
+      if (!byGroup.has(key)) {
+        byGroup.set(key, {
           category_id: key,
-          name: t.category?.name || '미분류',
-          color: t.category?.color || '#B0B8C1',
-          icon: t.category?.icon || 'etc',
+          name: entity?.name || (groupBy === 'spender' ? '미지정' : '미분류'),
+          color: entity?.color || '#B0B8C1',
+          icon: entity?.icon || 'etc',
           amount: 0,
         });
       }
-      byCategory.get(key).amount += Number(t.amount);
+      byGroup.get(key).amount += Number(t.amount);
     }
 
-    const result = Array.from(byCategory.values())
+    const result = Array.from(byGroup.values())
       .map((c) => ({ ...c, percent: total > 0 ? Math.round((c.amount / total) * 100) : 0 }))
       .sort((a, b) => b.amount - a.amount);
 
-    res.json({ month, type, total, categories: result });
+    res.json({ month, type, groupBy, total, categories: result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
