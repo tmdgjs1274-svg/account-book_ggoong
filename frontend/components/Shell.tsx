@@ -13,7 +13,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: '홈', icon: Home },
   { href: '/transactions', label: '내역', icon: List },
   { href: '/stats', label: '통계', icon: BarChart3 },
-  { href: '/budgets', label: '가계부설정', icon: Settings },
+  { href: '/budgets', label: '설정', icon: Settings },
 ];
 
 export default function Shell({ children }: { children: React.ReactNode }) {

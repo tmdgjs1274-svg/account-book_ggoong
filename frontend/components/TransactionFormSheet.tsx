@@ -166,33 +166,18 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
           </div>
         </div>
 
-        {/* 구성원 (누가 소비했는지) */}
-        <div className="mb-4">
-          <label className="mb-1 block text-xs font-medium text-ink-500">구성원 (선택)</label>
-          {spenders.length === 0 ? (
-            <p className="text-xs text-ink-300">
-              등록된 구성원이 없어요. 가계부 설정 &gt; 구성원 관리에서 추가할 수 있어요.
-            </p>
-          ) : (
+        {/* 구성원 (누가 소비했는지) - 등록된 구성원이 있을 때만 보여줘요 */}
+        {spenders.length > 0 && (
+          <div className="mb-4">
+            <label className="mb-1 block text-xs font-medium text-ink-500">구성원 (선택)</label>
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSpenderId(null)}
-                className={clsx(
-                  'rounded-full border px-3 py-2 text-sm font-medium transition',
-                  spenderId === null
-                    ? 'border-primary bg-primary-50 text-primary'
-                    : 'border-surface-border text-ink-500'
-                )}
-              >
-                미지정
-              </button>
               {spenders
                 .slice()
                 .sort((a, b) => a.sort_order - b.sort_order)
                 .map((s) => (
                   <button
                     key={s.id}
-                    onClick={() => setSpenderId(s.id)}
+                    onClick={() => setSpenderId(spenderId === s.id ? null : s.id)}
                     className={clsx(
                       'flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition',
                       spenderId === s.id
@@ -208,8 +193,8 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
                   </button>
                 ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* 날짜 */}
         <div className="mb-4">

@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import { formatWon } from '@/lib/format';
 import type { CategoryType } from '@/types';
 
-// 반복 거래 관리 화면의 실제 내용물입니다. "가계부 설정" 안의 반복 관리 탭에서 사용해요.
+// 반복 거래 관리 화면의 실제 내용물입니다. "설정" 안의 반복 관리 탭에서 사용해요.
 export default function RecurringManager() {
   const { recurrings, mutate } = useRecurring();
   const [sheetOpen, setSheetOpen] = useState(false);

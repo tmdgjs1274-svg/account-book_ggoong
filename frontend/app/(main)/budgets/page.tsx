@@ -2,27 +2,29 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Tags, Users, Repeat, LogOut } from 'lucide-react';
+import { Tags, Users, Repeat, User, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 import Card from '@/components/Card';
 import Switch from '@/components/Switch';
 import CategoryManager from '@/components/managers/CategoryManager';
 import SpenderManager from '@/components/managers/SpenderManager';
 import RecurringManager from '@/components/managers/RecurringManager';
+import ProfileManager from '@/components/managers/ProfileManager';
 import { useLedgerSettings } from '@/lib/hooks';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 
-type SettingsTab = 'categories' | 'spenders' | 'recurring';
+type SettingsTab = 'profile' | 'categories' | 'spenders' | 'recurring';
 
 const TABS: { value: SettingsTab; label: string; icon: typeof Tags }[] = [
-  { value: 'categories', label: '카테고리 관리', icon: Tags },
-  { value: 'spenders', label: '구성원 관리', icon: Users },
-  { value: 'recurring', label: '반복 관리', icon: Repeat },
+  { value: 'profile', label: '내 정보', icon: User },
+  { value: 'categories', label: '카테고리', icon: Tags },
+  { value: 'spenders', label: '구성원', icon: Users },
+  { value: 'recurring', label: '반복', icon: Repeat },
 ];
 
 export default function BudgetsSettingsPage() {
-  const [tab, setTab] = useState<SettingsTab>('categories');
+  const [tab, setTab] = useState<SettingsTab>('profile');
   const { signOut } = useAuth();
   const router = useRouter();
 
@@ -34,7 +36,7 @@ export default function BudgetsSettingsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-xl font-bold text-ink-900">가계부 설정</h1>
+      <h1 className="text-xl font-bold text-ink-900">설정</h1>
 
       <LedgerTypeSettings />
 
@@ -57,6 +59,7 @@ export default function BudgetsSettingsPage() {
         })}
       </div>
 
+      {tab === 'profile' && <ProfileManager />}
       {tab === 'categories' && <CategoryManager />}
       {tab === 'spenders' && <SpenderManager />}
       {tab === 'recurring' && <RecurringManager />}

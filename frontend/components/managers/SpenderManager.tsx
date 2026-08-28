@@ -27,7 +27,7 @@ const COLOR_PALETTE = [
   '#B0B8C1',
 ];
 
-// 구성원(소비자 이름표) 관리 화면의 실제 내용물입니다. /members 페이지와, "가계부 설정" 안의
+// 구성원(소비자 이름표) 관리 화면의 실제 내용물입니다. /members 페이지와, "설정" 안의
 // 구성원 관리 탭 양쪽에서 이 컴포넌트를 그대로 재사용해요.
 export default function SpenderManager() {
   const { currentGroup } = useGroupContext();
