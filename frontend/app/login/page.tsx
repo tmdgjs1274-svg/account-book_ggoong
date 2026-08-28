@@ -77,15 +77,20 @@ export default function LoginPage() {
             className="h-14 rounded-2xl border border-surface-border bg-surface-alt px-4 text-base outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
           />
 
-          <label className="flex items-center gap-2 px-1 text-sm text-ink-500">
-            <input
-              type="checkbox"
-              checked={rememberId}
-              onChange={(e) => setRememberId(e.target.checked)}
-              className="h-4 w-4 rounded border-surface-border accent-primary"
-            />
-            아이디 저장 (이 기기에서)
-          </label>
+          <div className="flex items-center justify-between px-1">
+            <label className="flex items-center gap-2 text-sm text-ink-500">
+              <input
+                type="checkbox"
+                checked={rememberId}
+                onChange={(e) => setRememberId(e.target.checked)}
+                className="h-4 w-4 rounded border-surface-border accent-primary"
+              />
+              아이디 저장 (이 기기에서)
+            </label>
+            <Link href="/reset-password" className="text-sm font-medium text-ink-300">
+              비밀번호를 잊으셨나요?
+            </Link>
+          </div>
 
           {error && <p className="text-sm text-expense">{error}</p>}
 
