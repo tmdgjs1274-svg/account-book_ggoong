@@ -7,14 +7,17 @@ import Card from '@/components/Card';
 import ProgressBar from '@/components/ProgressBar';
 import MonthSwitcher from '@/components/MonthSwitcher';
 import DonutChart from '@/components/DonutChart';
-import { useSummary, useBudgets, useBreakdown, useTransactions } from '@/lib/hooks';
+import { useSummary, useBudgets, useBreakdown, useTransactions, useLedgerSettings } from '@/lib/hooks';
 import { formatWon, formatDateLabel, currentMonthStr } from '@/lib/format';
 
 export default function DashboardPage() {
   const [month, setMonth] = useState(currentMonthStr());
+  const { bothEnabled, settings } = useLedgerSettings();
   const { summary, isLoading: summaryLoading } = useSummary(month);
   const { budgets } = useBudgets(month);
-  const { breakdown } = useBreakdown(month, 'expense');
+  // 수입만 쓰는 설정이면 "카테고리별 지출" 대신 수입 카테고리 비중을 보여줘요.
+  const breakdownType = bothEnabled || settings.expense_enabled ? 'expense' : 'income';
+  const { breakdown } = useBreakdown(month, breakdownType);
   const { transactions } = useTransactions(month);
 
   const topBudgets = [...budgets].sort((a, b) => b.usage_rate - a.usage_rate).slice(0, 3);
@@ -28,13 +31,43 @@ export default function DashboardPage() {
         <MonthSwitcher month={month} onChange={setMonth} />
       </div>
 
-      {/* 요약 카드 */}
+      {/* 요약 카드 - 수입/지출을 둘 다 쓰면 순잔액까지, 하나만 쓰면 그것만 보여줘요 */}
       <Card className="bg-gradient-to-br from-primary to-primary-600 text-white">
-        <p className="text-sm text-white/80">이번 달 지출</p>
-        <p className="mt-2 text-3xl font-extrabold">
-          {summaryLoading ? '...' : formatWon(summary?.expense || 0)}
-        </p>
-        {summary?.expense_change_rate !== null && summary?.expense_change_rate !== undefined && (
+        {bothEnabled ? (
+          <>
+            <p className="text-sm text-white/80">이번 달 요약</p>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <div>
+                <p className="text-xs text-white/70">순잔액</p>
+                <p className="mt-1 text-xl font-bold">
+                  {summaryLoading ? '...' : formatWon(summary?.balance || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-white/70">수입</p>
+                <p className="mt-1 text-xl font-bold">{formatWon(summary?.income || 0)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-white/70">지출</p>
+                <p className="mt-1 text-xl font-bold">{formatWon(summary?.expense || 0)}</p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-white/80">
+              이번 달 {settings.expense_enabled ? '지출' : '수입'}
+            </p>
+            <p className="mt-2 text-3xl font-extrabold">
+              {summaryLoading
+                ? '...'
+                : formatWon(
+                    (settings.expense_enabled ? summary?.expense : summary?.income) || 0
+                  )}
+            </p>
+          </>
+        )}
+        {settings.expense_enabled && summary?.expense_change_rate !== null && summary?.expense_change_rate !== undefined && (
           <div className="mt-4 flex items-center gap-1 text-xs text-white/80">
             {summary.expense_change_rate >= 0 ? (
               <TrendingUp size={14} />
@@ -50,7 +83,9 @@ export default function DashboardPage() {
       {/* 카테고리별 지출 비중 */}
       <Card>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-base font-bold text-ink-900">카테고리별 지출</h2>
+          <h2 className="text-base font-bold text-ink-900">
+            카테고리별 {breakdownType === 'expense' ? '지출' : '수입'}
+          </h2>
           <Link href="/stats" className="flex items-center text-xs text-ink-300">
             자세히 <ChevronRight size={14} />
           </Link>
@@ -127,7 +162,10 @@ export default function DashboardPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-ink-300">{formatDateLabel(t.occurred_on)}</p>
+                  <p className="text-xs text-ink-300">
+                    {formatDateLabel(t.occurred_on)}
+                    {t.memo && <span className="text-ink-300"> · {t.memo}</span>}
+                  </p>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
                   <span

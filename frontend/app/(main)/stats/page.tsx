@@ -7,7 +7,7 @@ import Card from '@/components/Card';
 import MonthSwitcher from '@/components/MonthSwitcher';
 import DonutChart from '@/components/DonutChart';
 import TrendBarChart from '@/components/TrendBarChart';
-import { useBreakdown, useTrend, useTransactions } from '@/lib/hooks';
+import { useBreakdown, useTrend, useTransactions, useLedgerSettings } from '@/lib/hooks';
 import { formatWon, currentMonthStr } from '@/lib/format';
 import type { CategoryType, Transaction } from '@/types';
 
@@ -16,7 +16,8 @@ const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 export default function StatsPage() {
   const [month, setMonth] = useState(currentMonthStr());
   const [type, setType] = useState<CategoryType>('expense');
-  const { breakdown, isLoading } = useBreakdown(month, type);
+  const { bothEnabled, forcedType, settings } = useLedgerSettings();
+  const { breakdown, isLoading } = useBreakdown(month, forcedType || type);
   const { trend } = useTrend(6);
   const { transactions } = useTransactions(month);
 
@@ -38,20 +39,22 @@ export default function StatsPage() {
       <h2 className="text-base font-bold text-ink-900">월별 상세</h2>
 
       <Card>
-        <div className="mb-4 flex rounded-2xl bg-surface-alt p-1">
-          {(['expense', 'income'] as CategoryType[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setType(t)}
-              className={clsx(
-                'flex-1 rounded-xl py-2.5 text-sm font-semibold transition',
-                type === t ? 'bg-white text-ink-900 shadow-card' : 'text-ink-300'
-              )}
-            >
-              {t === 'expense' ? '지출' : '수입'} 비중
-            </button>
-          ))}
-        </div>
+        {bothEnabled && (
+          <div className="mb-4 flex rounded-2xl bg-surface-alt p-1">
+            {(['expense', 'income'] as CategoryType[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setType(t)}
+                className={clsx(
+                  'flex-1 rounded-xl py-2.5 text-sm font-semibold transition',
+                  type === t ? 'bg-white text-ink-900 shadow-card' : 'text-ink-300'
+                )}
+              >
+                {t === 'expense' ? '지출' : '수입'} 비중
+              </button>
+            ))}
+          </div>
+        )}
 
         {isLoading ? (
           <p className="py-10 text-center text-sm text-ink-300">불러오는 중...</p>
@@ -84,14 +87,22 @@ export default function StatsPage() {
       {/* 최근 6개월 추이 - 월 선택과 무관하게 항상 최근 6개월 고정이라 월 전환 UI가 필요 없어요 */}
       <Card>
         <h2 className="mb-3 text-base font-bold text-ink-900">최근 6개월 추이</h2>
-        <TrendBarChart data={trend} />
+        <TrendBarChart
+          data={trend}
+          showIncome={settings.income_enabled}
+          showExpense={settings.expense_enabled}
+        />
         <div className="mt-2 flex justify-center gap-5 text-xs text-ink-500">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-income" /> 수입
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-expense" /> 지출
-          </span>
+          {settings.income_enabled && (
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-income" /> 수입
+            </span>
+          )}
+          {settings.expense_enabled && (
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-expense" /> 지출
+            </span>
+          )}
         </div>
       </Card>
     </div>

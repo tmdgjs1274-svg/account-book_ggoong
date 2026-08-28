@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Home, List, PiggyBank, BarChart3, Repeat, Plus, LogOut } from 'lucide-react';
+import { Home, List, BarChart3, Settings, Plus, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/lib/auth-context';
 import TransactionFormSheet from './TransactionFormSheet';
@@ -12,9 +12,8 @@ import GroupSwitcher from './GroupSwitcher';
 const NAV_ITEMS = [
   { href: '/dashboard', label: '홈', icon: Home },
   { href: '/transactions', label: '내역', icon: List },
-  { href: '/budgets', label: '예산', icon: PiggyBank },
   { href: '/stats', label: '통계', icon: BarChart3 },
-  { href: '/recurring', label: '반복', icon: Repeat },
+  { href: '/budgets', label: '가계부설정', icon: Settings },
 ];
 
 export default function Shell({ children }: { children: React.ReactNode }) {
@@ -59,7 +58,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           onClick={() => setQuickAddOpen(true)}
           className="mb-3 flex h-12 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-white"
         >
-          <Plus size={18} /> 거래 추가
+          <Plus size={18} /> 가계부 추가
         </button>
         <button
           onClick={handleSignOut}
@@ -94,7 +93,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         <button
           onClick={() => setQuickAddOpen(true)}
           className="-mt-5 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg"
-          aria-label="거래 추가"
+          aria-label="가계부 추가"
         >
           <Plus size={26} />
         </button>

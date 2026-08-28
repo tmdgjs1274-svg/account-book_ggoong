@@ -2,11 +2,27 @@ const express = require('express');
 const { supabaseAdmin } = require('../supabaseAdmin');
 const { ensureRecurringGenerated } = require('../lib/recurring');
 const { applyScope } = require('../middleware/groupContext');
+const { getLedgerSettings } = require('../lib/ledgerSettings');
 
 const router = express.Router();
 
 const SELECT_WITH_JOINS =
   '*, category:categories(id, name, color, icon, type), spender:spenders(id, name, color)';
+
+// 그룹(또는 개인) 설정에서 꺼둔 유형(수입/지출)으로는 거래를 기록할 수 없도록 막습니다.
+async function assertTypeAllowed(req, type) {
+  const settings = await getLedgerSettings(req);
+  if (type === 'income' && !settings.income_enabled) {
+    throw Object.assign(new Error('수입 사용이 꺼져 있어요. 설정에서 먼저 켜주세요.'), {
+      status: 400,
+    });
+  }
+  if (type === 'expense' && !settings.expense_enabled) {
+    throw Object.assign(new Error('지출 사용이 꺼져 있어요. 설정에서 먼저 켜주세요.'), {
+      status: 400,
+    });
+  }
+}
 
 // GET /api/transactions?month=YYYY-MM&type=expense&category_id=...
 router.get('/', async (req, res) => {
@@ -50,6 +66,12 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'type(income|expense)과 amount(양수)는 필수입니다.' });
   }
 
+  try {
+    await assertTypeAllowed(req, type);
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message });
+  }
+
   const { data, error } = await supabaseAdmin
     .from('transactions')
     .insert({
@@ -79,6 +101,14 @@ router.put('/:id', async (req, res) => {
     memo,
     occurred_on: occurredOn,
   } = req.body;
+
+  if (type && ['income', 'expense'].includes(type)) {
+    try {
+      await assertTypeAllowed(req, type);
+    } catch (e) {
+      return res.status(e.status || 500).json({ error: e.message });
+    }
+  }
 
   let query = supabaseAdmin
     .from('transactions')

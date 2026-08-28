@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { X, Settings } from 'lucide-react';
+import { X } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '@/lib/api';
-import { useCategories, useSpenders, isDataKey } from '@/lib/hooks';
+import { useCategories, useSpenders, useLedgerSettings, isDataKey } from '@/lib/hooks';
 import type { Transaction, CategoryType } from '@/types';
 import { useSWRConfig } from 'swr';
 
@@ -19,6 +18,7 @@ interface Props {
 export default function TransactionFormSheet({ open, onClose, onSaved, initial }: Props) {
   const { categories } = useCategories();
   const { spenders } = useSpenders();
+  const { bothEnabled, forcedType } = useLedgerSettings();
   const { mutate } = useSWRConfig();
 
   const [type, setType] = useState<CategoryType>('expense');
@@ -40,7 +40,7 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
       setOccurredOn(initial.occurred_on);
       setMemo(initial.memo || '');
     } else {
-      setType('expense');
+      setType(forcedType || 'expense');
       setAmount('');
       setCategoryId(null);
       setSpenderId(null);
@@ -48,7 +48,13 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
       setMemo('');
     }
     setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial]);
+
+  // 수입 또는 지출 중 하나만 쓰는 설정이면, 새 거래를 추가할 때 다른 유형을 고를 수 없어요.
+  useEffect(() => {
+    if (open && !initial && forcedType) setType(forcedType);
+  }, [open, initial, forcedType]);
 
   const filteredCategories = categories.filter((c) => c.type === type);
 
@@ -96,36 +102,38 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
       <div className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-sheet md:rounded-3xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-ink-900">
-            {initial ? '거래 수정' : '거래 추가'}
+            {initial ? '가계부 수정' : '가계부 추가'}
           </h2>
           <button onClick={onClose} className="rounded-full p-1 text-ink-300 hover:bg-surface-alt">
             <X size={22} />
           </button>
         </div>
 
-        {/* 수입/지출 토글 */}
-        <div className="mb-4 flex rounded-2xl bg-surface-alt p-1">
-          {(['expense', 'income'] as CategoryType[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => {
-                setType(t);
-                setCategoryId(null);
-              }}
-              className={clsx(
-                'flex-1 rounded-xl py-2.5 text-sm font-semibold transition',
-                type === t ? 'bg-white text-ink-900 shadow-card' : 'text-ink-300'
-              )}
-            >
-              {t === 'expense' ? '지출' : '수입'}
-            </button>
-          ))}
-        </div>
+        {/* 수입/지출 토글 (둘 다 사용 중일 때만 보여요) */}
+        {bothEnabled && (
+          <div className="mb-4 flex rounded-2xl bg-surface-alt p-1">
+            {(['expense', 'income'] as CategoryType[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => {
+                  setType(t);
+                  setCategoryId(null);
+                }}
+                className={clsx(
+                  'flex-1 rounded-xl py-2.5 text-sm font-semibold transition',
+                  type === t ? 'bg-white text-ink-900 shadow-card' : 'text-ink-300'
+                )}
+              >
+                {t === 'expense' ? '지출' : '수입'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* 금액 */}
         <div className="mb-4">
           <label className="mb-1 block text-xs font-medium text-ink-500">금액</label>
-          <div className="flex items-center rounded-2xl border border-surface-border bg-surface-alt px-4">
+          <div className="flex items-center rounded-2xl border border-surface-border bg-white px-4">
             <input
               inputMode="numeric"
               placeholder="0"
@@ -160,18 +168,10 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
 
         {/* 구성원 (누가 소비했는지) */}
         <div className="mb-4">
-          <div className="mb-1 flex items-center justify-between">
-            <label className="block text-xs font-medium text-ink-500">구성원 (선택)</label>
-            <Link
-              href="/members"
-              className="flex items-center gap-1 text-xs font-medium text-ink-300 hover:text-ink-500"
-            >
-              <Settings size={12} /> 관리
-            </Link>
-          </div>
+          <label className="mb-1 block text-xs font-medium text-ink-500">구성원 (선택)</label>
           {spenders.length === 0 ? (
             <p className="text-xs text-ink-300">
-              등록된 구성원이 없어요. 위 &apos;관리&apos;에서 추가할 수 있어요.
+              등록된 구성원이 없어요. 가계부 설정 &gt; 구성원 관리에서 추가할 수 있어요.
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">

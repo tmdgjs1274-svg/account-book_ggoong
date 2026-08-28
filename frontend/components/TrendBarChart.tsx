@@ -4,7 +4,15 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import type { TrendPoint } from '@/types';
 import { formatMonthLabel, formatWon } from '@/lib/format';
 
-export default function TrendBarChart({ data }: { data: TrendPoint[] }) {
+export default function TrendBarChart({
+  data,
+  showIncome = true,
+  showExpense = true,
+}: {
+  data: TrendPoint[];
+  showIncome?: boolean;
+  showExpense?: boolean;
+}) {
   const chartData = data.map((d) => ({ ...d, label: formatMonthLabel(d.month) }));
 
   return (
@@ -26,8 +34,8 @@ export default function TrendBarChart({ data }: { data: TrendPoint[] }) {
             ]}
             contentStyle={{ borderRadius: 12, border: '1px solid #E5E8EB', fontSize: 13 }}
           />
-          <Bar dataKey="income" fill="#00C2A8" radius={[6, 6, 0, 0]} maxBarSize={18} />
-          <Bar dataKey="expense" fill="#FF6B6B" radius={[6, 6, 0, 0]} maxBarSize={18} />
+          {showIncome && <Bar dataKey="income" fill="#00C2A8" radius={[6, 6, 0, 0]} maxBarSize={18} />}
+          {showExpense && <Bar dataKey="expense" fill="#FF6B6B" radius={[6, 6, 0, 0]} maxBarSize={18} />}
         </BarChart>
       </ResponsiveContainer>
     </div>

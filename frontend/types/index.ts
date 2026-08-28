@@ -108,3 +108,9 @@ export interface GroupMember {
   joined_at: string;
   is_me: boolean;
 }
+
+// 개인(또는 그룹) 전체에 공통 적용되는 수입/지출 사용 여부 설정.
+export interface LedgerSettings {
+  income_enabled: boolean;
+  expense_enabled: boolean;
+}

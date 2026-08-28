@@ -12,6 +12,7 @@ const recurringRouter = require('./routes/recurring');
 const statsRouter = require('./routes/stats');
 const groupsRouter = require('./routes/groups');
 const spendersRouter = require('./routes/spenders');
+const ledgerSettingsRouter = require('./routes/ledgerSettings');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -40,6 +41,7 @@ app.use('/api/transactions', resolveGroupContext, transactionsRouter);
 app.use('/api/budgets', resolveGroupContext, budgetsRouter);
 app.use('/api/recurring', resolveGroupContext, recurringRouter);
 app.use('/api/stats', resolveGroupContext, statsRouter);
+app.use('/api/ledger-settings', resolveGroupContext, ledgerSettingsRouter);
 
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Not Found' }));

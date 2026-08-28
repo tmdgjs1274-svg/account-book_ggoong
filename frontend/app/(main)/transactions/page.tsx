@@ -7,7 +7,7 @@ import clsx from 'clsx';
 import Card from '@/components/Card';
 import MonthSwitcher from '@/components/MonthSwitcher';
 import TransactionFormSheet from '@/components/TransactionFormSheet';
-import { useTransactions, isDataKey } from '@/lib/hooks';
+import { useTransactions, useLedgerSettings, isDataKey } from '@/lib/hooks';
 import { api } from '@/lib/api';
 import { formatWon, formatDateLabel, currentMonthStr } from '@/lib/format';
 import type { Transaction, CategoryType } from '@/types';
@@ -20,6 +20,7 @@ export default function TransactionsPage() {
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const { transactions, isLoading, mutate } = useTransactions(month);
+  const { bothEnabled, settings } = useLedgerSettings();
   const { mutate: globalMutate } = useSWRConfig();
 
   const filtered = useMemo(
@@ -61,31 +62,59 @@ export default function TransactionsPage() {
         <MonthSwitcher month={month} onChange={setMonth} />
       </div>
 
-      <div className="flex gap-2">
-        {(
-          [
-            ['all', '전체'],
-            ['expense', '지출'],
-            ['income', '수입'],
-          ] as [FilterType, string][]
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            onClick={() => setFilter(value)}
+      {bothEnabled && (
+        <div className="flex gap-2">
+          {(
+            [
+              ['all', '전체'],
+              ['expense', '지출'],
+              ['income', '수입'],
+            ] as [FilterType, string][]
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setFilter(value)}
+              className={clsx(
+                'rounded-full px-4 py-2 text-sm font-medium transition',
+                filter === value ? 'bg-ink-900 text-white' : 'bg-white text-ink-500'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {bothEnabled ? (
+        <Card className="flex justify-around text-center">
+          <div>
+            <p className="text-xs text-ink-300">수입</p>
+            <p className="text-base font-bold text-income">{formatWon(totals.income)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-ink-300">지출</p>
+            <p className="text-base font-bold text-expense">{formatWon(totals.expense)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-ink-300">합계</p>
+            <p className="text-base font-bold text-ink-900">
+              {formatWon(totals.income - totals.expense)}
+            </p>
+          </div>
+        </Card>
+      ) : (
+        <Card className="flex flex-col items-center text-center">
+          <p className="text-xs text-ink-300">{settings.expense_enabled ? '지출' : '수입'}</p>
+          <p
             className={clsx(
-              'rounded-full px-4 py-2 text-sm font-medium transition',
-              filter === value ? 'bg-ink-900 text-white' : 'bg-white text-ink-500'
+              'text-base font-bold',
+              settings.expense_enabled ? 'text-expense' : 'text-income'
             )}
           >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <Card className="flex flex-col items-center text-center">
-        <p className="text-xs text-ink-300">지출</p>
-        <p className="text-base font-bold text-expense">{formatWon(totals.expense)}</p>
-      </Card>
+            {formatWon(settings.expense_enabled ? totals.expense : totals.income)}
+          </p>
+        </Card>
+      )}
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-ink-300">불러오는 중...</p>
