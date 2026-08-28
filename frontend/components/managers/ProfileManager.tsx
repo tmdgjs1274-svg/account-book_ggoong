@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import Card from '@/components/Card';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabaseClient';
+import PasswordInput from '@/components/PasswordInput';
 
 // "설정 > 내 정보" 탭의 실제 내용물입니다. 닉네임 변경과 비밀번호 변경을 다뤄요.
 export default function ProfileManager() {
@@ -119,15 +120,13 @@ function PasswordSection() {
     <Card className="flex flex-col gap-3">
       <p className="text-sm font-semibold text-ink-900">비밀번호 변경</p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="password"
+        <PasswordInput
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="새 비밀번호 (6자 이상)"
           className="h-12 rounded-2xl border border-surface-border bg-white px-4 text-sm outline-none focus:border-primary"
         />
-        <input
-          type="password"
+        <PasswordInput
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           placeholder="새 비밀번호 확인"

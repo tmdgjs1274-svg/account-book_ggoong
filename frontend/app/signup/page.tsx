@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import PasswordInput from '@/components/PasswordInput';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -75,8 +76,7 @@ export default function SignupPage() {
             onChange={(e) => setEmail(e.target.value)}
             className="h-14 rounded-2xl border border-surface-border bg-surface-alt px-4 text-base outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
           />
-          <input
-            type="password"
+          <PasswordInput
             required
             placeholder="비밀번호 (6자 이상)"
             value={password}

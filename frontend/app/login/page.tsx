@@ -4,6 +4,7 @@ import { useState, FormEvent, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import PasswordInput from '@/components/PasswordInput';
 
 // 로그인 아이디(이메일) 기억하기 — 계정 설정이 아니라 "이 브라우저(이 기기)"에만 저장됩니다.
 // PC와 모바일에서 각각 다른 브라우저를 쓰면 그 브라우저별로 따로 기억돼요.
@@ -68,8 +69,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             className="h-14 rounded-2xl border border-surface-border bg-surface-alt px-4 text-base outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
           />
-          <input
-            type="password"
+          <PasswordInput
             required
             placeholder="비밀번호"
             value={password}
