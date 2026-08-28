@@ -17,14 +17,14 @@ import { api } from '@/lib/api';
 type SettingsTab = 'profile' | 'categories' | 'spenders' | 'recurring';
 
 const TABS: { value: SettingsTab; label: string; icon: typeof Tags }[] = [
-  { value: 'profile', label: '내 정보', icon: User },
   { value: 'categories', label: '카테고리', icon: Tags },
-  { value: 'spenders', label: '구성원', icon: Users },
+  { value: 'spenders', label: '구매자 관리', icon: Users },
   { value: 'recurring', label: '반복', icon: Repeat },
+  { value: 'profile', label: '내 정보', icon: User },
 ];
 
 export default function BudgetsSettingsPage() {
-  const [tab, setTab] = useState<SettingsTab>('profile');
+  const [tab, setTab] = useState<SettingsTab>('categories');
   const { signOut } = useAuth();
   const router = useRouter();
 
@@ -40,7 +40,7 @@ export default function BudgetsSettingsPage() {
 
       <LedgerTypeSettings />
 
-      <div className="flex rounded-2xl bg-surface-alt p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-2xl bg-surface-alt p-1">
         {TABS.map((t) => {
           const Icon = t.icon;
           return (
@@ -48,7 +48,7 @@ export default function BudgetsSettingsPage() {
               key={t.value}
               onClick={() => setTab(t.value)}
               className={clsx(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold transition sm:text-sm',
+                'flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-xs font-semibold transition sm:text-sm',
                 tab === t.value ? 'bg-white text-ink-900 shadow-card' : 'text-ink-300'
               )}
             >

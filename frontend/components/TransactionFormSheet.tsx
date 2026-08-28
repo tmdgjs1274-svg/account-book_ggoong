@@ -56,6 +56,17 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
     if (open && !initial && forcedType) setType(forcedType);
   }, [open, initial, forcedType]);
 
+  const sortedSpenders = spenders.slice().sort((a, b) => a.sort_order - b.sort_order);
+
+  // 구성원은 필수 선택이에요. 아직 안 골랐는데 고를 수 있는 구성원이 있으면 맨 처음 구성원으로 자동 지정해요.
+  useEffect(() => {
+    if (!open) return;
+    if (spenderId === null && sortedSpenders.length > 0) {
+      setSpenderId(sortedSpenders[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, spenders, initial]);
+
   const filteredCategories = categories.filter((c) => c.type === type);
 
   if (!open) return null;
@@ -130,19 +141,15 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
           </div>
         )}
 
-        {/* 금액 */}
+        {/* 날짜 */}
         <div className="mb-4">
-          <label className="mb-1 block text-xs font-medium text-ink-500">금액</label>
-          <div className="flex items-center rounded-2xl border border-surface-border bg-white px-4">
-            <input
-              inputMode="numeric"
-              placeholder="0"
-              value={amount ? Number(amount).toLocaleString('ko-KR') : ''}
-              onChange={(e) => handleAmountChange(e.target.value)}
-              className="h-14 flex-1 bg-transparent text-xl font-bold text-ink-900 outline-none"
-            />
-            <span className="text-base font-medium text-ink-500">원</span>
-          </div>
+          <label className="mb-1 block text-xs font-medium text-ink-500">날짜</label>
+          <input
+            type="date"
+            value={occurredOn}
+            onChange={(e) => setOccurredOn(e.target.value)}
+            className="h-12 w-full rounded-2xl border border-surface-border bg-surface-alt px-4 text-sm outline-none focus:border-primary"
+          />
         </div>
 
         {/* 카테고리 */}
@@ -166,57 +173,58 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
           </div>
         </div>
 
-        {/* 구성원 (누가 소비했는지) - 등록된 구성원이 있을 때만 보여줘요 */}
-        {spenders.length > 0 && (
+        {/* 구성원 (누가 소비했는지, 필수) - 등록된 구성원이 있을 때만 보여줘요 */}
+        {sortedSpenders.length > 0 && (
           <div className="mb-4">
-            <label className="mb-1 block text-xs font-medium text-ink-500">구성원 (선택)</label>
+            <label className="mb-1 block text-xs font-medium text-ink-500">구매자</label>
             <div className="flex flex-wrap gap-2">
-              {spenders
-                .slice()
-                .sort((a, b) => a.sort_order - b.sort_order)
-                .map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSpenderId(spenderId === s.id ? null : s.id)}
-                    className={clsx(
-                      'flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition',
-                      spenderId === s.id
-                        ? 'border-primary bg-primary-50 text-primary'
-                        : 'border-surface-border text-ink-500'
-                    )}
-                  >
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: s.color }}
-                    />
-                    {s.name}
-                  </button>
-                ))}
+              {sortedSpenders.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setSpenderId(s.id)}
+                  className={clsx(
+                    'flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition',
+                    spenderId === s.id
+                      ? 'border-primary bg-primary-50 text-primary'
+                      : 'border-surface-border text-ink-500'
+                  )}
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: s.color }}
+                  />
+                  {s.name}
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* 날짜 */}
-        <div className="mb-4">
-          <label className="mb-1 block text-xs font-medium text-ink-500">날짜</label>
-          <input
-            type="date"
-            value={occurredOn}
-            onChange={(e) => setOccurredOn(e.target.value)}
-            className="h-12 w-full rounded-2xl border border-surface-border bg-surface-alt px-4 text-sm outline-none focus:border-primary"
-          />
-        </div>
-
         {/* 메모 */}
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="mb-1 block text-xs font-medium text-ink-500">메모 (선택)</label>
           <input
             type="text"
             placeholder="예: 점심 식사"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
-            className="h-12 w-full rounded-2xl border border-surface-border bg-surface-alt px-4 text-sm outline-none focus:border-primary"
+            className="h-12 w-full rounded-2xl border border-surface-border bg-white px-4 text-sm outline-none focus:border-primary"
           />
+        </div>
+
+        {/* 금액 */}
+        <div className="mb-6">
+          <label className="mb-1 block text-xs font-medium text-ink-500">금액</label>
+          <div className="flex items-center rounded-2xl border border-surface-border bg-white px-4">
+            <input
+              inputMode="numeric"
+              placeholder="0"
+              value={amount ? Number(amount).toLocaleString('ko-KR') : ''}
+              onChange={(e) => handleAmountChange(e.target.value)}
+              className="h-14 flex-1 bg-transparent text-right text-xl font-bold text-ink-900 outline-none"
+            />
+            <span className="ml-1 text-base font-medium text-ink-500">원</span>
+          </div>
         </div>
 
         {error && <p className="mb-3 text-sm text-expense">{error}</p>}

@@ -133,19 +133,20 @@ router.get('/:id/members', async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
 
-  const withEmails = await Promise.all(
+  const withProfiles = await Promise.all(
     members.map(async (m) => {
       const { data } = await supabaseAdmin.auth.admin.getUserById(m.user_id);
       return {
         user_id: m.user_id,
         joined_at: m.joined_at,
         email: data?.user?.email || '알 수 없음',
+        nickname: data?.user?.user_metadata?.nickname || null,
         is_me: m.user_id === req.userId,
       };
     })
   );
 
-  res.json(withEmails);
+  res.json(withProfiles);
 });
 
 // POST /api/groups/:id/leave - 그룹 탈퇴

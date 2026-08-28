@@ -105,6 +105,7 @@ export interface Group {
 export interface GroupMember {
   user_id: string;
   email: string;
+  nickname: string | null;
   joined_at: string;
   is_me: boolean;
 }

@@ -161,7 +161,7 @@ function GroupDetail({
         {(members || []).map((m) => (
           <li key={m.user_id} className="flex items-center justify-between text-sm">
             <span className="text-ink-700">
-              {m.email} {m.is_me && <span className="text-xs text-ink-300">(나)</span>}
+              {m.nickname || '닉네임 없음'} {m.is_me && <span className="text-xs text-ink-300">(나)</span>}
             </span>
           </li>
         ))}
