@@ -147,35 +147,35 @@ export default function DashboardPage() {
         ) : (
           <ul className="flex flex-col divide-y divide-surface-border">
             {recentTransactions.map((t) => (
-              <li key={t.id} className="flex items-center justify-between py-3">
-                <div>
+              <li key={t.id} className="flex items-center justify-between gap-3 py-3">
+                <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium text-ink-900">
+                    <p className="truncate text-sm font-medium text-ink-900">
                       {t.category?.name || '미분류'}
                     </p>
                     {t.spender && (
                       <span
-                        className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+                        className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
                         style={{ backgroundColor: t.spender.color }}
                       >
                         {t.spender.name}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-ink-300">
+                  <p className="truncate text-xs text-ink-300">
                     {formatDateLabel(t.occurred_on)}
                     {t.memo && <span className="text-ink-300"> · {t.memo}</span>}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-0.5">
+                <div className="flex shrink-0 flex-col items-end gap-0.5">
                   <span
-                    className={`text-[10px] font-semibold ${
+                    className={`whitespace-nowrap text-[10px] font-semibold ${
                       t.type === 'income' ? 'text-income' : 'text-expense'
                     }`}
                   >
                     {t.type === 'income' ? '수입' : '지출'}
                   </span>
-                  <span className="text-sm font-semibold text-ink-900">
+                  <span className="whitespace-nowrap text-sm font-semibold text-ink-900">
                     {formatWon(t.amount)}
                   </span>
                 </div>

@@ -215,15 +215,16 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
         {/* 금액 */}
         <div className="mb-6">
           <label className="mb-1 block text-xs font-medium text-ink-500">금액</label>
-          <div className="flex items-center rounded-2xl border border-surface-border bg-white px-4">
+          <div className="flex items-center rounded-2xl border-2 border-primary bg-white px-4">
             <input
               inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="0"
               value={amount ? Number(amount).toLocaleString('ko-KR') : ''}
               onChange={(e) => handleAmountChange(e.target.value)}
-              className="h-14 flex-1 bg-transparent text-right text-xl font-bold text-ink-900 outline-none"
+              className="h-14 min-w-0 flex-1 bg-transparent text-right text-xl font-bold text-ink-900 outline-none"
             />
-            <span className="ml-1 text-base font-medium text-ink-500">원</span>
+            <span className="ml-1 shrink-0 text-base font-medium text-ink-500">원</span>
           </div>
         </div>
 

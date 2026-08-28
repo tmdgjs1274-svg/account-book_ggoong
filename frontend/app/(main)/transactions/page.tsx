@@ -128,40 +128,40 @@ export default function TransactionsPage() {
             </p>
             <Card className="divide-y divide-surface-border !p-0">
               {items.map((t) => (
-                <div key={t.id} className="group flex items-center justify-between px-5 py-4">
-                  <div className="flex items-center gap-3">
+                <div key={t.id} className="group flex items-center justify-between gap-3 px-5 py-4">
+                  <div className="flex min-w-0 items-center gap-3">
                     <span
-                      className="h-2.5 w-2.5 rounded-full"
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
                       style={{ backgroundColor: t.category?.color || '#B0B8C1' }}
                     />
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-medium text-ink-900">
+                        <p className="truncate text-sm font-medium text-ink-900">
                           {t.category?.name || '미분류'}
                         </p>
                         {t.spender && (
                           <span
-                            className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+                            className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
                             style={{ backgroundColor: t.spender.color }}
                           >
                             {t.spender.name}
                           </span>
                         )}
                       </div>
-                      {t.memo && <p className="text-xs text-ink-300">{t.memo}</p>}
+                      {t.memo && <p className="truncate text-xs text-ink-300">{t.memo}</p>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-3">
                     <div className="flex flex-col items-end gap-0.5">
                       <span
                         className={clsx(
-                          'text-[10px] font-semibold',
+                          'whitespace-nowrap text-[10px] font-semibold',
                           t.type === 'income' ? 'text-income' : 'text-expense'
                         )}
                       >
                         {t.type === 'income' ? '수입' : '지출'}
                       </span>
-                      <span className="text-sm font-semibold text-ink-900">
+                      <span className="whitespace-nowrap text-sm font-semibold text-ink-900">
                         {formatWon(t.amount)}
                       </span>
                     </div>
