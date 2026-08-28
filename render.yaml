@@ -23,15 +23,17 @@ services:
         sync: false
 
   # ----------------------------------------------------------------
-  # 프론트엔드 (Next.js)
+  # 프론트엔드 (Next.js) — 정적 export → Render Static Site
+  # (콜드스타트 없이 CDN으로 바로 서빙돼요. 이 블록은 참고용이고,
+  # 실제로는 Render 대시보드에서 이 설정 그대로 "새 Static Site"를 만들어야 해요 —
+  # 자세한 건 같이 드린 배포 가이드를 참고해주세요.)
   # ----------------------------------------------------------------
   - type: web
+    runtime: static
     name: hh-budget-web
-    runtime: node
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    staticPublishPath: out
     envVars:
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
