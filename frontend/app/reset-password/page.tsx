@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 type Step = 'request' | 'verify' | 'done';
 
-// 비밀번호를 잊었을 때, 이메일로 받은 6자리 인증코드를 입력해서 새 비밀번호를 설정하는 화면이에요.
+// 비밀번호를 잊었을 때, 이메일로 받은 인증코드를 입력해서 새 비밀번호를 설정하는 화면이에요.
 //
 // (기존엔 "링크 클릭" 방식이었는데, 일부 메일 서비스(네이버 메일 등)가 메일 안의 링크를
 // 보안 검사 목적으로 자동으로 미리 방문해버려서, 정작 사용자가 클릭했을 땐 이미 링크가
@@ -153,7 +153,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-sm">
         <h1 className="mb-1 text-2xl font-bold text-ink-900">인증코드 확인</h1>
         <p className="mb-10 text-sm text-ink-500">
-          {email}로 보낸 6자리 인증코드와 새 비밀번호를 입력해주세요
+          {email}로 보낸 인증코드와 새 비밀번호를 입력해주세요
         </p>
 
         <form onSubmit={handleVerify} className="flex flex-col gap-3">
@@ -161,10 +161,10 @@ export default function ResetPasswordPage() {
             type="text"
             inputMode="numeric"
             required
-            placeholder="인증코드 6자리"
+            placeholder="인증코드"
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))}
-            maxLength={6}
+            maxLength={12}
             className="h-14 rounded-2xl border border-surface-border bg-surface-alt px-4 text-center text-lg font-bold tracking-[0.3em] outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
           />
           <input
