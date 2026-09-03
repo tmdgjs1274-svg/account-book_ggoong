@@ -200,20 +200,8 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
           </div>
         )}
 
-        {/* 메모 */}
-        <div className="mb-4">
-          <label className="mb-1 block text-xs font-medium text-ink-500">메모 (선택)</label>
-          <input
-            type="text"
-            placeholder="예: 점심 식사"
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            className="h-12 w-full rounded-2xl border border-surface-border bg-white px-4 text-sm outline-none focus:border-primary"
-          />
-        </div>
-
         {/* 금액 */}
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="mb-1 block text-xs font-medium text-ink-500">금액</label>
           <div className="flex items-center rounded-2xl border-2 border-primary bg-white px-4">
             <input
@@ -226,6 +214,18 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
             />
             <span className="ml-1 shrink-0 text-base font-medium text-ink-500">원</span>
           </div>
+        </div>
+
+        {/* 메모 */}
+        <div className="mb-6">
+          <label className="mb-1 block text-xs font-medium text-ink-500">메모 (선택)</label>
+          <input
+            type="text"
+            placeholder="예: 점심 식사"
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            className="h-12 w-full rounded-2xl border border-surface-border bg-white px-4 text-sm outline-none focus:border-primary"
+          />
         </div>
 
         {error && <p className="mb-3 text-sm text-expense">{error}</p>}
