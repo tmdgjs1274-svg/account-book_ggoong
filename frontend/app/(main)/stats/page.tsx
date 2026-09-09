@@ -7,9 +7,10 @@ import Card from '@/components/Card';
 import MonthSwitcher from '@/components/MonthSwitcher';
 import DonutChart from '@/components/DonutChart';
 import TrendBarChart from '@/components/TrendBarChart';
+import BreakdownDetailSheet from '@/components/BreakdownDetailSheet';
 import { useBreakdown, useTrend, useTransactions, useLedgerSettings, useSpenders } from '@/lib/hooks';
 import { formatWon, currentMonthStr } from '@/lib/format';
-import type { CategoryType, Transaction } from '@/types';
+import type { CategoryType, Transaction, BreakdownItem } from '@/types';
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -17,11 +18,23 @@ export default function StatsPage() {
   const [month, setMonth] = useState(currentMonthStr());
   const [type, setType] = useState<CategoryType>('expense');
   const [breakdownGroupBy, setBreakdownGroupBy] = useState<'category' | 'spender'>('category');
+  const [selectedBreakdown, setSelectedBreakdown] = useState<BreakdownItem | null>(null);
   const { bothEnabled, forcedType, settings } = useLedgerSettings();
   const { breakdown, isLoading } = useBreakdown(month, forcedType || type, breakdownGroupBy);
   const { trend } = useTrend(6);
   const { transactions } = useTransactions(month);
   const { spenders } = useSpenders();
+
+  // 팝업에 보여줄, 선택한 카테고리(또는 구매자)에 해당하는 거래만 골라내요.
+  const breakdownDetailTransactions = useMemo(() => {
+    if (!selectedBreakdown) return [];
+    const activeType = forcedType || type;
+    return transactions.filter((t) => {
+      if (t.type !== activeType) return false;
+      const key = breakdownGroupBy === 'spender' ? t.spender_id : t.category_id;
+      return (key || 'none') === selectedBreakdown.category_id;
+    });
+  }, [selectedBreakdown, transactions, breakdownGroupBy, forcedType, type]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -80,9 +93,14 @@ export default function StatsPage() {
         ) : (
           <>
             <DonutChart data={breakdown?.categories || []} />
-            <div className="mt-4 flex flex-col gap-3">
+            <div className="mt-4 flex flex-col gap-1">
               {(breakdown?.categories || []).map((c) => (
-                <div key={c.category_id} className="flex items-center justify-between text-sm">
+                <button
+                  key={c.category_id}
+                  type="button"
+                  onClick={() => setSelectedBreakdown(c)}
+                  className="-mx-1 flex items-center justify-between rounded-xl px-1 py-1.5 text-sm transition active:bg-surface-alt"
+                >
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />
                     <span className="font-medium text-ink-700">{c.name}</span>
@@ -93,7 +111,7 @@ export default function StatsPage() {
                       {c.percent}%
                     </span>
                   </div>
-                </div>
+                </button>
               ))}
               {breakdown?.categories.length === 0 && (
                 <p className="py-6 text-center text-sm text-ink-300">기록된 내역이 없어요</p>
@@ -124,6 +142,16 @@ export default function StatsPage() {
           )}
         </div>
       </Card>
+
+      <BreakdownDetailSheet
+        open={!!selectedBreakdown}
+        onClose={() => setSelectedBreakdown(null)}
+        title={selectedBreakdown?.name || ''}
+        color={selectedBreakdown?.color || '#B0B8C1'}
+        amount={selectedBreakdown?.amount || 0}
+        groupBy={breakdownGroupBy}
+        transactions={breakdownDetailTransactions}
+      />
     </div>
   );
 }
