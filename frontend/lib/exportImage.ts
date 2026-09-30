@@ -6,14 +6,6 @@ import type { Transaction, LedgerSettings } from '@/types';
 // 별도의 DOM을 새로 만들어서 캡처하고 바로 지우는 방식으로 바꿨어요.
 // 아래 함수들은 실제 화면의 카드/리스트와 똑같은 Tailwind 클래스를 그대로 사용해요.
 
-// html2canvas는 자체적으로 CSS의 text-overflow: ellipsis(=Tailwind의 truncate)를
-// 다시 구현해서 그리는데, 한글·숫자·기호가 섞인 긴 한 줄(날짜 · 메모)에서
-// 그 계산이 어긋나 글자가 겹쳐 보이는(깨진 것처럼 보이는) 문제가 있었어요.
-// 그래서 내보내기 전용 DOM에서는 CSS truncate 대신 문자열을 미리 잘라서 넣어요.
-function truncateText(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-}
-
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   className?: string,
@@ -28,7 +20,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
 function buildStat(label: string, value: string, colorClass: string): HTMLDivElement {
   const wrap = el('div');
   wrap.appendChild(el('p', 'text-xs text-ink-300', label));
-  wrap.appendChild(el('p', `text-base font-bold ${colorClass}`, value));
+  wrap.appendChild(el('p', `whitespace-nowrap text-base font-bold ${colorClass}`, value));
   return wrap;
 }
 
@@ -52,7 +44,7 @@ function buildTotalsCard(
   const value = settings.expense_enabled ? totals.expense : totals.income;
   const colorClass = settings.expense_enabled ? 'text-expense' : 'text-income';
   card.appendChild(el('p', 'text-xs text-ink-300', label));
-  card.appendChild(el('p', `text-base font-bold ${colorClass}`, formatWon(value)));
+  card.appendChild(el('p', `whitespace-nowrap text-base font-bold ${colorClass}`, formatWon(value)));
   return card;
 }
 
@@ -67,28 +59,31 @@ function buildRow(t: Transaction, index: number): HTMLDivElement {
   left.appendChild(dot);
 
   const textWrap = el('div', 'min-w-0');
-  const titleRow = el('div', 'flex items-center gap-1.5');
+  const titleRow = el('div', 'flex min-w-0 items-center gap-1.5');
   titleRow.appendChild(
     el(
       'p',
-      'overflow-hidden whitespace-nowrap text-sm font-medium text-ink-900',
-      truncateText(t.category?.name || '미분류', 14)
+      'min-w-0 truncate text-sm font-medium text-ink-900',
+      t.category?.name || '미분류'
     )
   );
   if (t.spender) {
     const badge = el(
       'span',
-      'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium text-white',
-      truncateText(t.spender.name, 8)
+      'shrink-0 truncate rounded-full px-2 py-0.5 text-[10px] font-medium text-white',
+      t.spender.name
     );
     badge.style.backgroundColor = t.spender.color;
+    badge.style.maxWidth = '72px';
     titleRow.appendChild(badge);
   }
   textWrap.appendChild(titleRow);
   const dateLine = formatDateLabel(t.occurred_on) + (t.memo ? ` · ${t.memo}` : '');
-  textWrap.appendChild(
-    el('p', 'overflow-hidden whitespace-nowrap text-xs text-ink-300', truncateText(dateLine, 22))
-  );
+  // 문자 수가 아니라 실제 화면에 그려지는 폭 기준으로 말줄임표(…)가 붙도록
+  // CSS의 text-overflow: ellipsis(Tailwind truncate)를 그대로 써요.
+  // foreignObjectRendering은 브라우저가 실제로 화면을 그리는 방식을 그대로
+  // 이미지로 옮기기 때문에, 이제는 CSS truncate를 써도 글자가 깨지지 않아요.
+  textWrap.appendChild(el('p', 'truncate text-xs text-ink-300', dateLine));
   left.appendChild(textWrap);
   row.appendChild(left);
 
