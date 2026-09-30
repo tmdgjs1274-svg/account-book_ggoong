@@ -157,6 +157,7 @@ export default function TransactionsPage() {
           bothEnabled,
           settings,
           totals,
+          startIndex: i * IMAGE_CHUNK_SIZE,
         });
         document.body.appendChild(node);
         await new Promise((resolve) => requestAnimationFrame(resolve));
