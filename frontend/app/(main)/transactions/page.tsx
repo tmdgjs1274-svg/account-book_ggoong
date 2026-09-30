@@ -1,41 +1,61 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSWRConfig } from 'swr';
-import { Pencil, Trash2, ImageDown, FileSpreadsheet } from 'lucide-react';
+import { Pencil, Trash2, Download, List, CalendarDays } from 'lucide-react';
 import clsx from 'clsx';
 import Card from '@/components/Card';
 import MonthSwitcher from '@/components/MonthSwitcher';
 import TransactionFormSheet from '@/components/TransactionFormSheet';
+import ExportOptionsSheet from '@/components/ExportOptionsSheet';
 import { useTransactions, useLedgerSettings, useUserSettings, isDataKey } from '@/lib/hooks';
 import { api } from '@/lib/api';
+import { buildExportChunk } from '@/lib/exportImage';
 import { formatWon, formatDateLabel, formatMonthLabel, currentMonthStr } from '@/lib/format';
 import type { Transaction, CategoryType } from '@/types';
 
 type FilterType = 'all' | CategoryType;
 type ViewMode = 'grouped' | 'flat';
 
+const IMAGE_CHUNK_SIZE = 10;
+
 export default function TransactionsPage() {
   const [month, setMonth] = useState(currentMonthStr());
   const [filter, setFilter] = useState<FilterType>('all');
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [exporting, setExporting] = useState<'image' | 'excel' | null>(null);
+  const [exportSheetOpen, setExportSheetOpen] = useState(false);
+  const [exporting, setExporting] = useState<'image' | 'excel' | 'share' | null>(null);
+  const [shareAvailable, setShareAvailable] = useState(false);
   const { transactions, isLoading, mutate } = useTransactions(month);
   const { bothEnabled, settings } = useLedgerSettings();
   const { settings: userSettings, mutate: mutateUserSettings } = useUserSettings();
   const { mutate: globalMutate } = useSWRConfig();
-  const exportRef = useRef<HTMLDivElement>(null);
+
+  // 이 브라우저가 '파일 공유'를 지원하는지 마운트 후에 확인해요 (정적 내보내기 빌드라
+  // navigator는 서버에는 없어서, 빌드 중이 아니라 브라우저에서만 확인해야 해요).
+  useEffect(() => {
+    try {
+      const testFile = new File([new Blob()], 'test.png', { type: 'image/png' });
+      setShareAvailable(
+        typeof navigator !== 'undefined' &&
+          typeof navigator.canShare === 'function' &&
+          navigator.canShare({ files: [testFile] })
+      );
+    } catch {
+      setShareAvailable(false);
+    }
+  }, []);
 
   // 일별로 구분해서 볼지, 날짜 구분 없이 쭉 나열해서 볼지 — 그룹과 무관하게
   // 로그인 계정 자체에 저장돼서 다른 기기/그룹에서도 항상 같은 값을 봐요.
   const viewMode: ViewMode = userSettings.transactions_view_mode;
 
-  const handleViewModeChange = async (mode: ViewMode) => {
-    if (mode === viewMode) return;
-    mutateUserSettings({ transactions_view_mode: mode }, false);
+  const handleViewModeToggle = async () => {
+    const next: ViewMode = viewMode === 'flat' ? 'grouped' : 'flat';
+    mutateUserSettings({ transactions_view_mode: next }, false);
     try {
-      await api.put('/api/user-settings', { transactions_view_mode: mode });
+      await api.put('/api/user-settings', { transactions_view_mode: next });
     } catch {
       mutateUserSettings();
     }
@@ -73,22 +93,40 @@ export default function TransactionsPage() {
     globalMutate((key) => isDataKey(key, '/api/budgets'));
   };
 
-  // 지금 화면(요약 + 목록)을 그대로 PNG 이미지로 저장해요.
+  // 전체 내역을 이미지 1장으로 저장해요. 화면 스크롤 위치와 무관하게 항상
+  // 전체가 온전히 찍히도록, 화면 밖에 정확한 높이로 별도로 그려서 캡처해요.
   const handleExportImage = async () => {
-    if (!exportRef.current || exporting) return;
+    if (filtered.length === 0 || exporting) return;
     setExporting('image');
     try {
       const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(exportRef.current, {
+      const monthLabel = `${month.slice(0, 4)}년 ${Number(month.slice(5, 7))}월`;
+
+      const node = buildExportChunk({
+        chunk: filtered,
+        chunkIndex: 0,
+        totalChunks: 1,
+        monthLabel,
+        bothEnabled,
+        settings,
+        totals,
+      });
+      document.body.appendChild(node);
+      // 폰트/레이아웃이 자리잡을 한 프레임을 기다린 뒤 캡처해요.
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const canvas = await html2canvas(node, {
         backgroundColor: '#F2F4F6',
         scale: 2,
         useCORS: true,
       });
+      node.remove();
+
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = url;
       a.download = `뱅크로그_${month}_거래내역.png`;
       a.click();
+      setExportSheetOpen(false);
     } catch {
       alert('이미지 저장에 실패했어요. 잠시 후 다시 시도해주세요.');
     } finally {
@@ -96,21 +134,101 @@ export default function TransactionsPage() {
     }
   };
 
+  // 10건씩 나눈 이미지 여러 장을 기기의 '공유하기' 시트로 한 번에 넘겨요.
+  // (사진 앱에 한꺼번에 저장하거나, 카톡 등으로 바로 전송할 수 있어요)
+  const handleShareImages = async () => {
+    if (filtered.length === 0 || exporting || !shareAvailable) return;
+    setExporting('share');
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const chunks: Transaction[][] = [];
+      for (let i = 0; i < filtered.length; i += IMAGE_CHUNK_SIZE) {
+        chunks.push(filtered.slice(i, i + IMAGE_CHUNK_SIZE));
+      }
+      const monthLabel = `${month.slice(0, 4)}년 ${Number(month.slice(5, 7))}월`;
+
+      const files: File[] = [];
+      for (let i = 0; i < chunks.length; i += 1) {
+        const node = buildExportChunk({
+          chunk: chunks[i],
+          chunkIndex: i,
+          totalChunks: chunks.length,
+          monthLabel,
+          bothEnabled,
+          settings,
+          totals,
+        });
+        document.body.appendChild(node);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const canvas = await html2canvas(node, {
+          backgroundColor: '#F2F4F6',
+          scale: 2,
+          useCORS: true,
+        });
+        node.remove();
+        const blob: Blob | null = await new Promise((resolve) =>
+          canvas.toBlob(resolve, 'image/png')
+        );
+        if (blob) {
+          files.push(
+            new File([blob], `뱅크로그_${month}_거래내역_${i + 1}of${chunks.length}.png`, {
+              type: 'image/png',
+            })
+          );
+        }
+      }
+
+      if (files.length === 0) throw new Error('이미지를 만들지 못했어요.');
+
+      if (navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({ files, title: `${monthLabel} 거래 내역` });
+        setExportSheetOpen(false);
+      } else {
+        alert('이 브라우저에서는 공유하기가 지원되지 않아요.');
+      }
+    } catch (e) {
+      // 사용자가 공유 시트에서 직접 취소한 경우는 에러로 안내하지 않아요.
+      if (!(e instanceof Error && e.name === 'AbortError')) {
+        alert('공유하기에 실패했어요. 잠시 후 다시 시도해주세요.');
+      }
+    } finally {
+      setExporting(null);
+    }
+  };
+
   // 현재 필터가 적용된 거래 목록을 엑셀(.xlsx) 파일로 내려받아요.
+  // 맨 위에 수입/지출/합계 요약을 같이 넣어요.
   const handleExportExcel = async () => {
     if (filtered.length === 0 || exporting) return;
     setExporting('excel');
     try {
       const XLSX = await import('xlsx');
-      const rows = filtered.map((t) => ({
-        날짜: t.occurred_on,
-        구분: t.type === 'income' ? '수입' : '지출',
-        카테고리: t.category?.name || '미분류',
-        구매자: t.spender?.name || '',
-        메모: t.memo || '',
-        금액: Number(t.amount),
-      }));
-      const sheet = XLSX.utils.json_to_sheet(rows);
+
+      const summaryRows: (string | number)[][] = bothEnabled
+        ? [
+            ['수입', totals.income],
+            ['지출', totals.expense],
+            ['합계', totals.income - totals.expense],
+          ]
+        : [[settings.expense_enabled ? '지출' : '수입', settings.expense_enabled ? totals.expense : totals.income]];
+
+      const aoa: (string | number)[][] = [
+        [`${month.slice(0, 4)}년 ${Number(month.slice(5, 7))}월 거래 내역`],
+        [],
+        ...summaryRows,
+        [],
+        ['날짜', '구분', '카테고리', '구매자', '메모', '금액'],
+        ...filtered.map((t) => [
+          t.occurred_on,
+          t.type === 'income' ? '수입' : '지출',
+          t.category?.name || '미분류',
+          t.spender?.name || '',
+          t.memo || '',
+          Number(t.amount),
+        ]),
+      ];
+
+      const sheet = XLSX.utils.aoa_to_sheet(aoa);
       sheet['!cols'] = [
         { wch: 12 },
         { wch: 8 },
@@ -122,6 +240,7 @@ export default function TransactionsPage() {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, sheet, formatMonthLabel(month));
       XLSX.writeFile(workbook, `뱅크로그_${month}_거래내역.xlsx`);
+      setExportSheetOpen(false);
     } catch {
       alert('엑셀 저장에 실패했어요. 잠시 후 다시 시도해주세요.');
     } finally {
@@ -131,9 +250,27 @@ export default function TransactionsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-bold text-ink-900">거래 내역</h1>
-        <MonthSwitcher month={month} onChange={setMonth} />
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            onClick={handleViewModeToggle}
+            aria-label={viewMode === 'flat' ? '전체 나열 중 (탭하면 일별 보기로)' : '일별 보기 중 (탭하면 전체 나열로)'}
+            title={viewMode === 'flat' ? '전체 나열' : '일별 보기'}
+            className="rounded-full p-2 text-ink-500 hover:bg-surface-alt"
+          >
+            {viewMode === 'flat' ? <List size={18} /> : <CalendarDays size={18} />}
+          </button>
+          <button
+            onClick={() => setExportSheetOpen(true)}
+            aria-label="이미지/엑셀로 내보내기"
+            title="내보내기"
+            className="rounded-full p-2 text-ink-500 hover:bg-surface-alt"
+          >
+            <Download size={18} />
+          </button>
+          <MonthSwitcher month={month} onChange={setMonth} />
+        </div>
       </div>
 
       {bothEnabled && (
@@ -159,127 +296,79 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      {/* 보기 방식 토글 + 내보내기 버튼 */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex gap-1 rounded-xl bg-surface-alt p-1">
-          {(
-            [
-              ['flat', '전체 나열'],
-              ['grouped', '일별 보기'],
-            ] as [ViewMode, string][]
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              onClick={() => handleViewModeChange(value)}
-              className={clsx(
-                'rounded-lg px-3 py-1.5 text-xs font-semibold transition',
-                viewMode === value ? 'bg-white text-ink-900 shadow-card' : 'text-ink-300'
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="flex shrink-0 gap-1.5">
-          <button
-            onClick={handleExportImage}
-            disabled={exporting !== null}
-            className="flex items-center gap-1 rounded-full border border-surface-border bg-white px-3 py-1.5 text-xs font-medium text-ink-500 transition hover:bg-surface-alt disabled:opacity-50"
-          >
-            <ImageDown size={14} />
-            이미지
-          </button>
-          <button
-            onClick={handleExportExcel}
-            disabled={exporting !== null}
-            className="flex items-center gap-1 rounded-full border border-surface-border bg-white px-3 py-1.5 text-xs font-medium text-ink-500 transition hover:bg-surface-alt disabled:opacity-50"
-          >
-            <FileSpreadsheet size={14} />
-            엑셀
-          </button>
-        </div>
-      </div>
-
-      {/* 이미지로 저장할 때 이 영역만 캡처해요 (위 토글/버튼은 제외) */}
-      <div ref={exportRef} className="flex flex-col gap-5">
-        <p className="px-1 text-xs font-semibold text-ink-300">
-          {month.slice(0, 4)}년 {Number(month.slice(5, 7))}월 거래 내역
-        </p>
-
-        {bothEnabled ? (
-          <Card className="flex justify-around text-center">
-            <div>
-              <p className="text-xs text-ink-300">수입</p>
-              <p className="text-base font-bold text-income">{formatWon(totals.income)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-ink-300">지출</p>
-              <p className="text-base font-bold text-expense">{formatWon(totals.expense)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-ink-300">합계</p>
-              <p className="text-base font-bold text-ink-900">
-                {formatWon(totals.income - totals.expense)}
-              </p>
-            </div>
-          </Card>
-        ) : (
-          <Card className="flex flex-col items-center text-center">
-            <p className="text-xs text-ink-300">{settings.expense_enabled ? '지출' : '수입'}</p>
-            <p
-              className={clsx(
-                'text-base font-bold',
-                settings.expense_enabled ? 'text-expense' : 'text-income'
-              )}
-            >
-              {formatWon(settings.expense_enabled ? totals.expense : totals.income)}
+      {bothEnabled ? (
+        <Card className="flex justify-around text-center">
+          <div>
+            <p className="text-xs text-ink-300">수입</p>
+            <p className="text-base font-bold text-income">{formatWon(totals.income)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-ink-300">지출</p>
+            <p className="text-base font-bold text-expense">{formatWon(totals.expense)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-ink-300">합계</p>
+            <p className="text-base font-bold text-ink-900">
+              {formatWon(totals.income - totals.expense)}
             </p>
-          </Card>
-        )}
+          </div>
+        </Card>
+      ) : (
+        <Card className="flex flex-col items-center text-center">
+          <p className="text-xs text-ink-300">{settings.expense_enabled ? '지출' : '수입'}</p>
+          <p
+            className={clsx(
+              'text-base font-bold',
+              settings.expense_enabled ? 'text-expense' : 'text-income'
+            )}
+          >
+            {formatWon(settings.expense_enabled ? totals.expense : totals.income)}
+          </p>
+        </Card>
+      )}
 
-        {isLoading ? (
-          <p className="py-10 text-center text-sm text-ink-300">불러오는 중...</p>
-        ) : filtered.length === 0 ? (
-          <p className="py-10 text-center text-sm text-ink-300">기록된 거래가 없어요</p>
-        ) : viewMode === 'grouped' ? (
-          grouped.map(([date, items]) => (
-            <div key={date}>
-              <p className="mb-2 px-1 text-xs font-semibold text-ink-300">
-                {formatDateLabel(date)}
-              </p>
-              <Card className="divide-y divide-surface-border !p-0">
-                {items.map((t) => (
-                  <TransactionRow
-                    key={t.id}
-                    t={t}
-                    showDate={false}
-                    onEdit={() => {
-                      setEditing(t);
-                      setSheetOpen(true);
-                    }}
-                    onDelete={() => handleDelete(t.id)}
-                  />
-                ))}
-              </Card>
-            </div>
-          ))
-        ) : (
-          <Card className="divide-y divide-surface-border !p-0">
-            {filtered.map((t) => (
-              <TransactionRow
-                key={t.id}
-                t={t}
-                showDate
-                onEdit={() => {
-                  setEditing(t);
-                  setSheetOpen(true);
-                }}
-                onDelete={() => handleDelete(t.id)}
-              />
-            ))}
-          </Card>
-        )}
-      </div>
+      {isLoading ? (
+        <p className="py-10 text-center text-sm text-ink-300">불러오는 중...</p>
+      ) : filtered.length === 0 ? (
+        <p className="py-10 text-center text-sm text-ink-300">기록된 거래가 없어요</p>
+      ) : viewMode === 'grouped' ? (
+        grouped.map(([date, items]) => (
+          <div key={date}>
+            <p className="mb-2 px-1 text-xs font-semibold text-ink-300">
+              {formatDateLabel(date)}
+            </p>
+            <Card className="divide-y divide-surface-border !p-0">
+              {items.map((t) => (
+                <TransactionRow
+                  key={t.id}
+                  t={t}
+                  showDate={false}
+                  onEdit={() => {
+                    setEditing(t);
+                    setSheetOpen(true);
+                  }}
+                  onDelete={() => handleDelete(t.id)}
+                />
+              ))}
+            </Card>
+          </div>
+        ))
+      ) : (
+        <Card className="divide-y divide-surface-border !p-0">
+          {filtered.map((t) => (
+            <TransactionRow
+              key={t.id}
+              t={t}
+              showDate
+              onEdit={() => {
+                setEditing(t);
+                setSheetOpen(true);
+              }}
+              onDelete={() => handleDelete(t.id)}
+            />
+          ))}
+        </Card>
+      )}
 
       <TransactionFormSheet
         open={sheetOpen}
@@ -293,6 +382,16 @@ export default function TransactionsPage() {
           setEditing(null);
           mutate();
         }}
+      />
+
+      <ExportOptionsSheet
+        open={exportSheetOpen}
+        onClose={() => (exporting ? null : setExportSheetOpen(false))}
+        onSelectImage={handleExportImage}
+        onSelectExcel={handleExportExcel}
+        onSelectShare={handleShareImages}
+        shareAvailable={shareAvailable}
+        exporting={exporting}
       />
     </div>
   );
@@ -310,7 +409,7 @@ function TransactionRow({
   onDelete: () => void;
 }) {
   return (
-    <div className="group flex items-center justify-between gap-3 px-5 py-4">
+    <div className="flex items-center justify-between gap-3 px-5 py-4">
       <div className="flex min-w-0 items-center gap-3">
         <span
           className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -354,8 +453,7 @@ function TransactionRow({
             {formatWon(t.amount)}
           </span>
         </div>
-        {/* 이미지로 내보낼 때는 수정/삭제 버튼이 필요 없으니 캡처에서 제외해요 */}
-        <div className="flex items-center gap-1" data-html2canvas-ignore="true">
+        <div className="flex items-center gap-1">
           <button onClick={onEdit} className="rounded-full p-1.5 text-ink-300 hover:bg-surface-alt">
             <Pencil size={15} />
           </button>
