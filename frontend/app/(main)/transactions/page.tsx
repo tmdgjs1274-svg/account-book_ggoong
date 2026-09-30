@@ -251,8 +251,8 @@ export default function TransactionsPage() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-ink-900">거래 내역</h1>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex items-center gap-1">
+          <h1 className="text-xl font-bold text-ink-900">거래 내역</h1>
           <button
             onClick={handleViewModeToggle}
             aria-label={viewMode === 'flat' ? '전체 나열 중 (탭하면 일별 보기로)' : '일별 보기 중 (탭하면 전체 나열로)'}
@@ -269,8 +269,8 @@ export default function TransactionsPage() {
           >
             <Download size={18} />
           </button>
-          <MonthSwitcher month={month} onChange={setMonth} />
         </div>
+        <MonthSwitcher month={month} onChange={setMonth} />
       </div>
 
       {bothEnabled && (
