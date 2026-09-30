@@ -13,6 +13,7 @@ const statsRouter = require('./routes/stats');
 const groupsRouter = require('./routes/groups');
 const spendersRouter = require('./routes/spenders');
 const ledgerSettingsRouter = require('./routes/ledgerSettings');
+const userSettingsRouter = require('./routes/userSettings');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -33,6 +34,9 @@ app.use('/api', requireAuth);
 
 // 그룹 관리 자체는 개인/그룹 컨텍스트와 무관 (X-Group-Id 헤더 불필요)
 app.use('/api/groups', groupsRouter);
+
+// 계정 단위 개인 설정도 그룹과 무관하게 항상 로그인 계정 자체에 저장해요
+app.use('/api/user-settings', userSettingsRouter);
 
 // 아래는 X-Group-Id 헤더로 개인/그룹 컨텍스트를 판별
 app.use('/api/categories', resolveGroupContext, categoriesRouter);

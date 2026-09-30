@@ -115,3 +115,8 @@ export interface LedgerSettings {
   income_enabled: boolean;
   expense_enabled: boolean;
 }
+
+// 그룹과 무관하게 로그인한 계정 자체에 저장되는 개인 UI 설정.
+export interface UserSettings {
+  transactions_view_mode: 'grouped' | 'flat';
+}

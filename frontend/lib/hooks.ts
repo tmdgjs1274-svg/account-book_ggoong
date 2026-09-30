@@ -12,6 +12,7 @@ import type {
   TrendPoint,
   BreakdownResponse,
   LedgerSettings,
+  UserSettings,
 } from '@/types';
 
 // 그룹 컨텍스트가 바뀌면 캐시 키도 바뀌어서 자동으로 다시 불러옵니다.
@@ -112,6 +113,18 @@ export function useLedgerSettings() {
       : 'expense';
 
   return { settings, bothEnabled, forcedType, error, isLoading, mutate };
+}
+
+const DEFAULT_USER_SETTINGS: UserSettings = { transactions_view_mode: 'flat' };
+
+// 그룹과 무관하게 로그인한 계정 자체에 저장되는 개인 UI 설정(예: 거래 내역 보기 방식).
+// 그룹을 전환해도 값이 바뀌지 않아야 해서, 캐시 키에 currentGroupId를 넣지 않아요.
+export function useUserSettings() {
+  const { data, error, isLoading, mutate } = useSWR<UserSettings>(
+    '/api/user-settings',
+    (path: string) => api.get<UserSettings>(path)
+  );
+  return { settings: data || DEFAULT_USER_SETTINGS, error, isLoading, mutate };
 }
 
 /** 그룹/개인 컨텍스트가 바뀌었을 때 관련된 모든 데이터를 다시 불러오기 위한 키 판별 헬퍼 */
