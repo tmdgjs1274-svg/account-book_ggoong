@@ -118,6 +118,10 @@ export default function TransactionsPage() {
         backgroundColor: '#F2F4F6',
         scale: 2,
         useCORS: true,
+        // html2canvas 자체 캔버스 텍스트 렌더러는 한글(받침 있는 글자)을 깨뜨리는
+        // 버그가 있어요. foreignObjectRendering을 켜면 브라우저의 실제 텍스트
+        // 렌더링을 그대로 이미지로 옮기기 때문에 이 문제가 생기지 않아요.
+        foreignObjectRendering: true,
       });
       node.remove();
 
@@ -165,6 +169,10 @@ export default function TransactionsPage() {
           backgroundColor: '#F2F4F6',
           scale: 2,
           useCORS: true,
+          // html2canvas 자체 캔버스 텍스트 렌더러는 한글(받침 있는 글자)을 깨뜨리는
+          // 버그가 있어요. foreignObjectRendering을 켜면 브라우저의 실제 텍스트
+          // 렌더링을 그대로 이미지로 옮기기 때문에 이 문제가 생기지 않아요.
+          foreignObjectRendering: true,
         });
         node.remove();
         const blob: Blob | null = await new Promise((resolve) =>

@@ -6,11 +6,13 @@ import type { Transaction, LedgerSettings } from '@/types';
 // 별도의 DOM을 새로 만들어서 캡처하고 바로 지우는 방식으로 바꿨어요.
 // 아래 함수들은 실제 화면의 카드/리스트와 똑같은 Tailwind 클래스를 그대로 사용해요.
 
-// html2canvas는 사이트에서 쓰는 가변 폰트(Pretendard Variable)를 캡처할 때
-// 글자가 다른 글자로 깨져 보이는 알려진 문제가 있어요. 내보내는 이미지에서만
-// 기기에 이미 설치된 일반(가변 아님) 한글 폰트를 쓰도록 강제해서 이 문제를 피해요.
-const EXPORT_FONT_STACK =
-  "'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif";
+// html2canvas는 자체적으로 CSS의 text-overflow: ellipsis(=Tailwind의 truncate)를
+// 다시 구현해서 그리는데, 한글·숫자·기호가 섞인 긴 한 줄(날짜 · 메모)에서
+// 그 계산이 어긋나 글자가 겹쳐 보이는(깨진 것처럼 보이는) 문제가 있었어요.
+// 그래서 내보내기 전용 DOM에서는 CSS truncate 대신 문자열을 미리 잘라서 넣어요.
+function truncateText(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -67,20 +69,26 @@ function buildRow(t: Transaction, index: number): HTMLDivElement {
   const textWrap = el('div', 'min-w-0');
   const titleRow = el('div', 'flex items-center gap-1.5');
   titleRow.appendChild(
-    el('p', 'truncate text-sm font-medium text-ink-900', t.category?.name || '미분류')
+    el(
+      'p',
+      'overflow-hidden whitespace-nowrap text-sm font-medium text-ink-900',
+      truncateText(t.category?.name || '미분류', 14)
+    )
   );
   if (t.spender) {
     const badge = el(
       'span',
       'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium text-white',
-      t.spender.name
+      truncateText(t.spender.name, 8)
     );
     badge.style.backgroundColor = t.spender.color;
     titleRow.appendChild(badge);
   }
   textWrap.appendChild(titleRow);
   const dateLine = formatDateLabel(t.occurred_on) + (t.memo ? ` · ${t.memo}` : '');
-  textWrap.appendChild(el('p', 'truncate text-xs text-ink-300', dateLine));
+  textWrap.appendChild(
+    el('p', 'overflow-hidden whitespace-nowrap text-xs text-ink-300', truncateText(dateLine, 22))
+  );
   left.appendChild(textWrap);
   row.appendChild(left);
 
@@ -128,10 +136,15 @@ export function buildExportChunk({
 }): HTMLDivElement {
   const container = el('div', 'flex flex-col gap-4 bg-surface-alt p-4');
   container.style.position = 'fixed';
-  container.style.left = '-9999px';
+  // 화면 밖 음수 좌표(예: left: -9999px)에 두면 html2canvas의
+  // foreignObjectRendering(아래 html2canvas 호출부 참고)이 빈 이미지를
+  // 만들어내는 문제가 있어요. 그래서 좌표는 (0,0)에 그대로 두고, z-index를
+  // 맨 뒤로 보내서 실제 화면 내용 뒤에 가려지게 하는 방식으로 안 보이게 해요.
+  container.style.left = '0';
   container.style.top = '0';
+  container.style.zIndex = '-1';
+  container.style.pointerEvents = 'none';
   container.style.width = '420px';
-  container.style.fontFamily = EXPORT_FONT_STACK;
 
   const title =
     totalChunks > 1
