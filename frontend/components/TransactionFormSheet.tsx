@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '@/lib/api';
@@ -29,6 +29,21 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
   const [memo, setMemo] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const sortedSpenders = spenders.slice().sort((a, b) => a.sort_order - b.sort_order);
+
+  // 날짜 입력칸은 브라우저 기본 동작상 우측 달력 아이콘을 눌러야만 달력이
+  // 열려요. 입력칸 어디를 누르든 달력이 바로 열리도록 showPicker()를
+  // 직접 호출해줘요. (showPicker 미지원 브라우저에서는 그냥 평소처럼
+  // 커서만 놓이고, 아이콘을 누르면 여전히 정상적으로 열려요.)
+  const openDatePicker = () => {
+    try {
+      dateInputRef.current?.showPicker?.();
+    } catch {
+      // showPicker가 지원되지 않거나 실패해도 조용히 무시해요.
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -43,7 +58,11 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
       setType(forcedType || 'expense');
       setAmount('');
       setCategoryId(null);
-      setSpenderId(null);
+      // 구성원은 필수 선택이라, 창을 열 때 이미 구성원 목록을 알고 있으면
+      // 바로 첫 번째 구성원을 기본값으로 선택해둬요. (이전에는 일단 null로
+      // 비워뒀다가 아래 별도 effect에서 다시 채워 넣었는데, 두 번째로 열 때부터는
+      // 그 effect가 다시 실행되지 않아 기본 선택이 비는 문제가 있었어요.)
+      setSpenderId(sortedSpenders.length > 0 ? sortedSpenders[0].id : null);
       setOccurredOn(new Date().toISOString().slice(0, 10));
       setMemo('');
     }
@@ -56,9 +75,8 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
     if (open && !initial && forcedType) setType(forcedType);
   }, [open, initial, forcedType]);
 
-  const sortedSpenders = spenders.slice().sort((a, b) => a.sort_order - b.sort_order);
-
-  // 구성원은 필수 선택이에요. 아직 안 골랐는데 고를 수 있는 구성원이 있으면 맨 처음 구성원으로 자동 지정해요.
+  // 구성원 목록이 창을 연 뒤에야 뒤늦게 로드되는 경우를 대비한 보강용 effect예요.
+  // (바로 위 reset에서 이미 기본값을 넣었다면 spenderId가 null이 아니라서 여긴 그냥 지나가요.)
   useEffect(() => {
     if (!open) return;
     if (spenderId === null && sortedSpenders.length > 0) {
@@ -145,9 +163,11 @@ export default function TransactionFormSheet({ open, onClose, onSaved, initial }
         <div className="mb-4">
           <label className="mb-1 block text-xs font-medium text-ink-500">날짜</label>
           <input
+            ref={dateInputRef}
             type="date"
             value={occurredOn}
             onChange={(e) => setOccurredOn(e.target.value)}
+            onClick={openDatePicker}
             className="h-12 w-full rounded-2xl border border-surface-border bg-surface-alt px-4 text-sm outline-none focus:border-primary"
           />
         </div>
